@@ -1,0 +1,27 @@
+{
+  // Cloudflare Sandboxes backend. Deploying requires an authenticated
+  // wrangler; see backends/cloudflare/README.md for the run-later steps.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "claude-sandbox-cf",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "observability": { "enabled": true },
+
+  "containers": [
+    {
+      "class_name": "Sandbox",
+      "image": "./Dockerfile",
+      "instance_type": "lite",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "class_name": "Sandbox", "name": "Sandbox" }]
+  },
+  "migrations": [{ "new_sqlite_classes": ["Sandbox"], "tag": "v1" }]
+
+  // Run-later: the Anthropic environment key must be a Worker secret, never
+  // a plaintext var:
+  //   wrangler secret put ANTHROPIC_ENVIRONMENT_KEY
+  //   wrangler secret put ANTHROPIC_ENVIRONMENT_ID
+}

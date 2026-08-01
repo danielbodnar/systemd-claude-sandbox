@@ -45,6 +45,7 @@ systemd's role is deliberately small. `host/systemd/claude-sandbox.service` brin
 | `host/systemd/` | The one unit that supervises the stack on bb1 |
 | `scripts/deploy-bb1.sh` | Host-side installer, invoked by `just deploy` |
 | `examples/tunnel.jsonc` | Tunnel route configuration |
+| `backends/cloudflare/` | Alternative execution backend on Cloudflare Sandboxes (same contract, different runtime) |
 | `docs/` | Architecture notes and decision records |
 | `justfile` | The repeatable workflow: build, run, test, deploy, publish |
 
@@ -95,6 +96,10 @@ just remote-status
 ```
 
 The installer stages the stack in `/opt/claude-sandbox`, seeds `/opt/claude-sandbox/.env` from the example if absent, and installs the systemd unit. Fill in the environment key on the host before starting.
+
+## Alternative backend: Cloudflare Sandboxes
+
+`backends/cloudflare/` implements the same execution contract on Cloudflare's Sandbox SDK (GA since April 2026): sessions become `Sandbox` Durable Object instances, the container image re-applies the same provisioning (ant CLI, Bun) on Cloudflare's base image, the same `ant beta:worker poll` can run inside a sandbox, and in-sandbox MCP servers are exposed through the SDK's native cloudflared tunnels instead of mcp-tunnel. The Worker typechecks today; everything requiring an authenticated wrangler (secrets, dev, deploy) is documented in `backends/cloudflare/README.md` as run-later steps, in the same spirit as the bb1 deploy.
 
 ## Publishing to GitHub
 

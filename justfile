@@ -81,6 +81,22 @@ remote-status:
 remote-logs:
     ssh {{remote}} "cd /opt/claude-sandbox && docker compose logs -f --tail 100"
 
+# --- cloudflare backend -----------------------------------------------------
+
+cf-install:
+    cd backends/cloudflare && bun install
+
+cf-typecheck:
+    cd backends/cloudflare && bun run typecheck
+
+# Run-later recipes: these need an authenticated wrangler and, for cf-dev,
+# a local Docker daemon.
+cf-dev:
+    cd backends/cloudflare && bunx wrangler dev
+
+cf-deploy:
+    cd backends/cloudflare && bunx wrangler deploy
+
 # --- repo -------------------------------------------------------------------
 
 # Create the private GitHub repo and push (run once, needs gh auth).
