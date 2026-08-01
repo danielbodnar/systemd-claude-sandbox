@@ -1,0 +1,7 @@
+# Secrets for the Cloudflare Sandboxes backend. The Deploy to Cloudflare
+# button reads this file and prompts for values during setup; for a manual
+# deploy, copy to .dev.vars for `wrangler dev` or set them with
+# `wrangler secret put <NAME>`. Same rule as the compose stack: only the
+# environment key belongs here, never an organization API key.
+ANTHROPIC_ENVIRONMENT_KEY=""
+ANTHROPIC_ENVIRONMENT_ID=""

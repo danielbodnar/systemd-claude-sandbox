@@ -2,7 +2,7 @@
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Fdanielbodnar%2Fsystemd-claude-sandbox%2Ftree%2Fmain%2Fbackends%2Fcloudflare)
 
-The button clones the repository into your Cloudflare account and deploys this directory's Worker (`wrangler.jsonc`). Deploying the container image and setting the two Anthropic secrets are still required afterwards — see the run-later steps below.
+The button deploys your own instance of this backend to your own Cloudflare account: it clones the repository into your GitHub or GitLab account, prompts for the two Anthropic secrets declared in [`.dev.vars.example`](.dev.vars.example) (`ANTHROPIC_ENVIRONMENT_KEY` and `ANTHROPIC_ENVIRONMENT_ID`), provisions the `Sandbox` Durable Object, and builds and deploys this directory's Worker (`wrangler.jsonc`) through Workers Builds, redeploying on every push to your clone. The container image requires a Workers paid plan with Containers enabled. Deploying by hand instead follows the run-later steps below.
 
 An alternative execution backend for the Claude self-hosted sandbox: the same contract as the local compose stack, running on Cloudflare's Sandbox SDK (generally available since April 2026) instead of Docker on a self-hosted server. A session is still an isolated Linux container with `/bin/bash`, a `/workspace` directory, Bun, Python, and the `ant` CLI; what changes is who runs the container and how it is reached.
 
