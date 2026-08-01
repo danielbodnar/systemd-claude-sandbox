@@ -1,5 +1,7 @@
 # Cloudflare Sandboxes backend
 
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/danielbodnar/systemd-claude-sandbox)
+
 An alternative execution backend for the Claude self-hosted sandbox: the same contract as the local compose stack, running on Cloudflare's Sandbox SDK (generally available since April 2026) instead of Docker on a self-hosted server. A session is still an isolated Linux container with `/bin/bash`, a `/workspace` directory, Bun, Python, and the `ant` CLI; what changes is who runs the container and how it is reached.
 
 ## Contract mapping

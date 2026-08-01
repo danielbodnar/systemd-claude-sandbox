@@ -37,6 +37,7 @@ export default defineConfig({
           label: "How-to guides",
           items: [
             { label: "Deploy to your own host", slug: "how-to/deploy" },
+            { label: "Deploy to Cloudflare Sandboxes", slug: "how-to/deploy-cloudflare" },
             { label: "Enable the Cloudflare Tunnel publisher", slug: "how-to/cloudflared" },
             { label: "Add an agent to the dev image", slug: "how-to/add-agent" },
           ],

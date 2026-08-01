@@ -1,0 +1,68 @@
+---
+title: Deploy to Cloudflare Sandboxes
+description: Deploy the sandbox backend to Cloudflare Sandboxes — one-click or with wrangler from the backends/cloudflare directory.
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components";
+
+The `backends/cloudflare/` directory implements the same execution contract as the local compose stack, running on [Cloudflare Sandboxes](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/sandboxes/) (GA since April 2026). Sessions become Durable Object instances; the same `ant beta:worker poll` runs inside each one.
+
+## One-click deploy
+
+Click the button to fork the repository into your Cloudflare account and deploy in one step. You will be prompted to add the required secrets before the first deploy runs.
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/danielbodnar/systemd-claude-sandbox)
+
+<Aside type="caution">
+  The wrangler configuration lives in `backends/cloudflare/`, not the repository
+  root. If the one-click flow prompts you to select a directory, choose
+  `backends/cloudflare`. After the fork completes, add the two required secrets
+  as described in step 2 below.
+</Aside>
+
+## Manual deploy with wrangler
+
+<Steps>
+
+1. Authenticate and install dependencies.
+
+   ```bash
+   cd backends/cloudflare
+   bun install
+   wrangler login
+   ```
+
+2. Add the Anthropic environment credentials as Worker secrets. These must be
+   secrets, not plaintext vars — agent tool calls can read the worker environment.
+
+   ```bash
+   wrangler secret put ANTHROPIC_ENVIRONMENT_KEY
+   wrangler secret put ANTHROPIC_ENVIRONMENT_ID
+   ```
+
+3. Deploy.
+
+   ```bash
+   wrangler deploy
+   ```
+
+   The `wrangler.jsonc` `instance_type` defaults to `lite`. Raise it to a larger
+   instance type if sessions require more memory or CPU.
+
+</Steps>
+
+## Start a session
+
+Once deployed, start the Anthropic worker inside a sandbox by posting to the
+session endpoint:
+
+```bash
+curl -X POST https://claude-sandbox-cf.<your-subdomain>.workers.dev/sessions/my-session/ant
+```
+
+MCP servers running inside the sandbox are reachable through the SDK's native
+cloudflared quick tunnel; see `sandbox.tunnels.get(port)` in the Worker source.
+
+## Relationship to the local compose backend
+
+Both backends implement the same contract. See the [architecture explanation](../../explanation/architecture/) for a comparison.
