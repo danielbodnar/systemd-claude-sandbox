@@ -99,6 +99,12 @@ cf-deploy:
 
 # --- repo -------------------------------------------------------------------
 
-# Create the private GitHub repo and push (run once, needs gh auth).
+# Create the private GitHub repo if missing and push (idempotent, needs gh
+# auth). An origin remote already exists in this clone, so creation and push
+# are separate steps rather than gh's --source/--push shorthand.
 publish:
-    gh repo create danielbodnar/systemd-claude-sandbox --private --source=. --remote=origin --push
+    gh repo view danielbodnar/systemd-claude-sandbox >/dev/null 2>&1 || \
+        gh repo create danielbodnar/systemd-claude-sandbox --private
+    git remote get-url origin >/dev/null 2>&1 || \
+        git remote add origin https://github.com/danielbodnar/systemd-claude-sandbox.git
+    git push -u origin main
