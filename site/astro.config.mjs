@@ -2,9 +2,16 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 
+// On GitHub Pages the site is served under the repository subpath, so the
+// base applies only in CI (or when DOCS_BASE is set explicitly). Local
+// `just docs-dev` and `just docs-build` stay at the root.
+const base =
+  process.env.DOCS_BASE ??
+  (process.env.GITHUB_ACTIONS === "true" ? "/systemd-claude-sandbox" : undefined);
+
 export default defineConfig({
   site: "https://danielbodnar.github.io",
-  base: "/systemd-claude-sandbox",
+  base,
   integrations: [
     starlight({
       title: "systemd-claude-sandbox",

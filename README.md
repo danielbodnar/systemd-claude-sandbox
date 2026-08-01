@@ -3,7 +3,7 @@
 A repeatable, self-hosted code-execution sandbox for Claude, built as a docker compose stack and supervised by systemd on any Linux host you control. The stack implements Anthropic's self-hosted sandbox contract for Claude Managed Agents, in which Anthropic enqueues sessions and a worker on your host polls the queue, claims work, and executes tool calls locally. A companion component, `mcp-tunnel`, exposes MCP servers running inside the sandbox network to remote clients such as Claude Desktop and claude.ai.
 
 > [!NOTE]
-> Full documentation lives in the Starlight site under [`site/`](site/), organized as a tutorial, how-to guides, reference, and explanation. Run it locally with `just docs-dev`. This README is the short version; the site is the deep dive.
+> Full documentation lives in the Starlight site under [`site/`](site/), organized as a tutorial, how-to guides, reference, and explanation. Once published, it deploys automatically to [danielbodnar.github.io/systemd-claude-sandbox](https://danielbodnar.github.io/systemd-claude-sandbox/) on every push to main; run it locally with `just docs-dev`. This README is the short version; the site is the deep dive.
 
 ## The contract this implements
 
@@ -148,8 +148,10 @@ The repository doubles as a Claude Code plugin marketplace. `.claude-plugin/mark
 The repository is created and pushed once with:
 
 ```sh
-just publish         # gh repo create danielbodnar/systemd-claude-sandbox --private --source=. --push
+just publish
 ```
+
+The recipe creates the private repository if it is missing, pushes main, and enables GitHub Pages with the Actions source through the API. The docs workflow (`.github/workflows/docs.yml`) then builds `site/` with Bun and deploys it on every push to main. If the Pages API call fails, flip it manually once: Settings, then Pages, then Source: GitHub Actions.
 
 ## Open decision: tunnel publish transport
 
