@@ -51,7 +51,13 @@ systemd's role is deliberately small. `host/systemd/claude-sandbox.service` brin
 
 ## Quick start
 
-Local bring-up:
+The fastest path on any machine is the launcher script, which clones the repository if needed, probes the host for git, bun, docker or podman, compose, just, the devcontainers CLI, VS Code, and WSL, prints its decision trail, and picks the best launch mode: the compose stack when a compose-capable engine exists, the devcontainer when only Docker plus tooling exists, bare-metal bun development as the floor, and on native Windows the WSL path first, with an interactive menu instead of a failure when nothing fits. It never starts the devcontainer without Docker, delegates the actual work to the justfile, and is safe to re-run over an existing clone. From PowerShell, invoke it through WSL or Git Bash as the header explains; force a mode with `CLAUDE_SANDBOX_MODE=compose|devcontainer|bare|wsl`.
+
+```sh
+bash install.sh
+```
+
+Manual local bring-up:
 
 ```sh
 cp .env.example .env      # fill in ANTHROPIC_ENVIRONMENT_KEY and _ID
