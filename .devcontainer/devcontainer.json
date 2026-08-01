@@ -1,0 +1,54 @@
+{
+  // Claude Code devcontainer for working on this repository, adapted from
+  // anthropics/claude-code/.devcontainer but wired to the existing compose
+  // stack: the dev container is the `dev` service, a thin stage on top of
+  // the sandbox worker image (one image lineage, no parallel Dockerfile).
+  //
+  // Runtime flags (privileged for docker-in-docker, NET_ADMIN and NET_RAW
+  // for the firewall script) live on the compose service, since compose
+  // owns container creation in this setup.
+  "name": "systemd-claude-sandbox dev",
+  "dockerComposeFile": ["../compose.yaml"],
+  "service": "dev",
+  "runServices": ["dev"],
+  "workspaceFolder": "/workspace",
+  "remoteUser": "dev",
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:3": {
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "bash": { "path": "bash", "icon": "terminal-bash" },
+          "zsh": { "path": "zsh" }
+        }
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/dev/.claude",
+    "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
+  },
+
+  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
+  "waitFor": "postStartCommand"
+}

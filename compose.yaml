@@ -16,7 +16,10 @@ services:
   # `ant beta:worker poll --on-work` on the host instead; the image's default
   # entrypoint (ant beta:worker run) exists for exactly that mode.
   worker:
-    build: ./sandbox
+    build:
+      context: .
+      dockerfile: sandbox/Dockerfile
+      target: sandbox
     image: claude-sandbox-worker:latest
     entrypoint: ["ant", "beta:worker", "poll", "--workdir", "/workspace"]
     environment:
@@ -61,6 +64,38 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # Claude Code devcontainer service, consumed by .devcontainer/
+  # devcontainer.json (dockerComposeFile + service). A thin dev stage on the
+  # worker image; started only by the devcontainer CLI or the dev profile,
+  # never as part of the sandbox stack.
+  #
+  # Honest note on privileges: the docker-in-docker feature declares
+  # privileged operation, and for compose-based devcontainers that flag must
+  # be set here, so this service runs privileged with NET_ADMIN and NET_RAW
+  # on top for the upstream firewall script. Do not reuse this service shape
+  # for anything that executes untrusted code.
+  dev:
+    profiles: [dev]
+    build:
+      context: .
+      dockerfile: sandbox/Dockerfile
+      target: dev
+      args:
+        TZ: ${TZ:-America/Chicago}
+    image: claude-sandbox-dev:latest
+    command: ["sleep", "infinity"]
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - .:/workspace:cached
+      - claude-code-config:/home/dev/.claude
+      - command-history:/commandhistory
+    environment:
+      NODE_OPTIONS: --max-old-space-size=4096
+    networks: [sandbox]
+
   # PROPOSED default publish transport, pending confirmation. Enable with:
   #   docker compose --profile cloudflared up -d
   # The tunnel token is created in the Cloudflare Zero Trust dashboard with
@@ -78,3 +113,5 @@ networks:
 
 volumes:
   workspace: {}
+  claude-code-config: {}
+  command-history: {}

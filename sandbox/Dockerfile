@@ -1,11 +1,17 @@
-# Sandbox worker image, following the self-hosted sandbox integration guide
-# (platform.claude.com/docs/en/managed-agents/self-hosted-sandboxes).
-# Contract requirements: /bin/bash must exist at that exact path, curl is
-# only needed at build time, WORKDIR and VOLUME are /workspace, and the
-# default entrypoint runs one session and exits (spawn-per-session mode).
-# The compose service overrides the entrypoint to run the always-on poller.
+# One image lineage, two stages.
+#
+# sandbox: the worker image following the self-hosted sandbox integration
+#   guide (platform.claude.com/docs/en/managed-agents/self-hosted-sandboxes).
+#   Contract requirements: /bin/bash at that exact path, curl only needed at
+#   build time, WORKDIR and VOLUME are /workspace, default entrypoint runs
+#   one session and exits. The compose worker service overrides the
+#   entrypoint to run the always-on poller.
+#
+# dev: a thin devcontainer stage on top of sandbox for working on this repo
+#   with Claude Code, adapted from anthropics/claude-code/.devcontainer.
+#   Both services build from this file with the repo root as context.
 
-FROM debian:trixie-slim
+FROM debian:trixie-slim AS sandbox
 
 ARG ANT_VERSION=1.21.0
 ARG BUN_VERSION=1.3.14
@@ -29,3 +35,62 @@ WORKDIR /workspace
 VOLUME /workspace
 
 ENTRYPOINT ["ant", "beta:worker", "run"]
+
+# ---------------------------------------------------------------------------
+
+FROM sandbox AS dev
+
+ARG TZ=America/Chicago
+ENV TZ="$TZ"
+ENV DEVCONTAINER=true
+
+# Tooling from the upstream Claude Code devcontainer, plus the firewall
+# dependencies its init script needs (iptables, ipset, aggregate, dig).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        less procps sudo fzf zsh man-db gnupg2 gh wget \
+        iptables ipset iproute2 dnsutils aggregate nano vim openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG GIT_DELTA_VERSION=0.18.2
+RUN ARCH=$(dpkg --print-architecture) && \
+    wget -q "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
+    dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
+    rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
+
+# Non-root user. The upstream devcontainer inherits the node user from its
+# base image; this lineage has none, so create one.
+ARG USERNAME=dev
+RUN useradd -m -u 1000 -s /bin/zsh "$USERNAME" && \
+    mkdir -p /commandhistory "/home/${USERNAME}/.claude" && \
+    touch /commandhistory/.bash_history && \
+    chown -R "$USERNAME:$USERNAME" /commandhistory "/home/${USERNAME}/.claude" /workspace
+
+# Firewall script from the upstream devcontainer, runnable via sudo only.
+COPY .devcontainer/init-firewall.sh /usr/local/bin/init-firewall.sh
+RUN chmod +x /usr/local/bin/init-firewall.sh && \
+    echo "${USERNAME} ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/dev-firewall && \
+    chmod 0440 /etc/sudoers.d/dev-firewall
+
+USER $USERNAME
+ENV SHELL=/bin/zsh
+ENV EDITOR=nano
+ENV VISUAL=nano
+
+ARG ZSH_IN_DOCKER_VERSION=1.2.0
+RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh)" -- \
+    -p git \
+    -p fzf \
+    -a "source /usr/share/doc/fzf/examples/key-bindings.zsh" \
+    -a "source /usr/share/doc/fzf/examples/completion.zsh" \
+    -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+    -x
+
+# Claude Code through the native installer; this lineage carries Bun, not
+# Node, so the upstream npm install path does not apply.
+ARG CLAUDE_CODE_VERSION=latest
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- "$CLAUDE_CODE_VERSION"
+ENV PATH="/home/dev/.local/bin:$PATH"
+ENV CLAUDE_CONFIG_DIR=/home/dev/.claude
+
+ENTRYPOINT []
+CMD ["sleep", "infinity"]

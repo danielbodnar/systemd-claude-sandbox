@@ -47,6 +47,20 @@ test:
 tunnel-dev config="examples/tunnel.jsonc":
     cd mcp-tunnel && bun run src/index.ts --config ../{{config}}
 
+# --- devcontainer -----------------------------------------------------------
+
+# Build and start the Claude Code devcontainer (dev service + features).
+devcontainer-up:
+    bunx @devcontainers/cli up --workspace-folder .
+
+# Open a shell inside the running devcontainer.
+devcontainer-shell:
+    bunx @devcontainers/cli exec --workspace-folder . zsh
+
+# Parse and print the resolved devcontainer configuration.
+devcontainer-config:
+    bunx @devcontainers/cli read-configuration --workspace-folder . --include-merged-configuration
+
 # --- deploy (run manually; connects over SSH) -------------------------------
 
 # Stage the stack on the remote and install it. Uses the `bb1` alias.

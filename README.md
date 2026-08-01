@@ -68,6 +68,22 @@ just test
 just tunnel-dev
 ```
 
+## Devcontainer
+
+The repository ships a Claude Code devcontainer adapted from the reference one in anthropics/claude-code, wired into the existing compose stack instead of a standalone build. `.devcontainer/devcontainer.json` points `dockerComposeFile` at `compose.yaml` and uses the `dev` service, which builds the `dev` stage of `sandbox/Dockerfile`. That keeps a single image lineage: the dev stage layers Claude Code (native installer), zsh, git-delta, gh, and the upstream network firewall onto the same base the worker uses.
+
+Docker-in-docker comes from the `ghcr.io/devcontainers/features/docker-in-docker:3` feature, so the full compose stack can be built and run from inside the devcontainer. Be aware of what that costs: the feature requires privileged operation, and with a compose-based devcontainer that flag must sit on the `dev` service itself, alongside the NET_ADMIN and NET_RAW capabilities the firewall script needs. The dev service is therefore a privileged container. It is confined to the `dev` compose profile so it never starts with the sandbox stack, and its shape must not be copied to services that execute untrusted code.
+
+The firewall script is the upstream `init-firewall.sh`, vendored unmodified: default-deny egress with an allowlist of GitHub, npm, and Anthropic endpoints, applied at container start via `postStartCommand`.
+
+```sh
+just devcontainer-config   # parse and print the resolved configuration
+just devcontainer-up       # build and start (bunx @devcontainers/cli)
+just devcontainer-shell    # zsh inside the container
+```
+
+VS Code and other devcontainer-aware editors pick up `.devcontainer/devcontainer.json` directly.
+
 ## Deployment to bb1
 
 Remote recipes reference the `bb1` SSH host alias from your SSH config; the justfile carries no host, port, or user data. Deployment is a manual step:
