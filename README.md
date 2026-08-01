@@ -80,6 +80,21 @@ just test
 just tunnel-dev
 ```
 
+### Lifecycle scripts
+
+The repository is also a Bun workspace (`mcp-tunnel`, `site`, `backends/cloudflare`), and the root `package.json` exposes the workflow as npm-ecosystem lifecycle scripts. The justfile remains the source of truth; the scripts are thin wrappers that delegate to it or to per-workspace scripts through `bun run --filter`.
+
+```sh
+bun install              # one root lockfile for all three workspaces
+bun run build            # tunnel typecheck + tests, backend typecheck, site build
+bun run test             # tunnel test suite
+bun run typecheck        # tunnel and Cloudflare backend
+bun run docs:dev         # Starlight dev server
+bun run deploy -- host=MY-SERVER   # passes through to just deploy
+```
+
+Arguments after `--` pass through to the underlying just recipe, which is how `deploy` receives its host.
+
 ## Devcontainer
 
 The repository ships a Claude Code devcontainer adapted from the reference one in anthropics/claude-code, wired into the existing compose stack instead of a standalone build. `.devcontainer/devcontainer.json` points `dockerComposeFile` at `compose.yaml` and uses the `dev` service, which builds the `dev` stage of `sandbox/Dockerfile`. That keeps a single image lineage: the dev stage layers Claude Code (native installer), zsh, git-delta, gh, and the upstream network firewall onto the same base the worker uses.
