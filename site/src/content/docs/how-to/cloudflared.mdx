@@ -1,0 +1,50 @@
+---
+title: Enable the Cloudflare Tunnel publisher
+description: Publish the MCP tunnel through Cloudflare Tunnel so remote clients such as Claude Desktop and claude.ai can reach it.
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components";
+
+By default the MCP tunnel listens on loopback only. This guide publishes it through Cloudflare Tunnel, the proposed default transport.
+
+<Aside type="caution">
+  The transport choice is a recorded decision that is proposed but not yet accepted; see [transports and the open decision](../../explanation/transports/). That is why cloudflared is double-gated: a compose profile guards the service, and the in-process adapter additionally requires a flag. Treat this guide as opting into the proposal.
+</Aside>
+
+## Prerequisites
+
+- A Cloudflare account and a zone you control
+- A running sandbox stack
+
+## Steps
+
+<Steps>
+
+1. Create a tunnel in the Cloudflare Zero Trust dashboard under Networks, then Tunnels. Choose the cloudflared connector and copy the tunnel token.
+
+2. Point the tunnel's public hostname at the MCP tunnel service. Set the ingress origin to `http://mcp-tunnel:8787`, which is the service name on the compose network.
+
+3. Add the token to your `.env`.
+
+   ```bash
+   CLOUDFLARE_TUNNEL_TOKEN=YOUR-TUNNEL-TOKEN
+   ```
+
+4. Start the stack with the cloudflared profile.
+
+   ```bash
+   just up-cloudflared
+   ```
+
+5. Verify from outside. Replace the hostname with the one you configured.
+
+   ```bash
+   curl https://mcp.example.com/healthz
+   # {"ok":true,"routes":["example"]}
+   ```
+
+</Steps>
+
+## Protect the endpoint
+
+MCP servers behind the tunnel trust their callers, so put Cloudflare Access in front of the public hostname before sharing it. An Access policy that requires your identity provider costs nothing extra and turns the endpoint from public to authenticated.

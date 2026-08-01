@@ -1,0 +1,17 @@
+{
+  "name": "systemd-claude-sandbox",
+  "private": true,
+  "type": "module",
+  "workspaces": ["mcp-tunnel", "site", "backends/cloudflare"],
+  "scripts": {
+    "build": "bun run typecheck && bun run test && bun run docs:build",
+    "dev": "just tunnel-dev",
+    "test": "bun run --filter mcp-tunnel test",
+    "typecheck": "bun run --filter mcp-tunnel typecheck && bun run --filter claude-sandbox-cf typecheck",
+    "docs:build": "bun run --filter site build",
+    "docs:dev": "bun run --filter site dev",
+    "tapes": "just tapes",
+    "deploy": "just deploy",
+    "publish": "just publish"
+  }
+}

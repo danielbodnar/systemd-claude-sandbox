@@ -1,0 +1,32 @@
+---
+title: The sandbox contract
+description: What Anthropic's self-hosted sandbox integration requires, and how this project satisfies it on two runtimes.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+This project does not invent a sandbox API. It implements the contract defined by Anthropic's self-hosted sandboxes guide for Claude Managed Agents, and everything in the stack follows from that contract's constraints.
+
+## A queue, not a push API
+
+The `self_hosted` environment is a work queue. You create sessions from wherever your API key lives; Anthropic enqueues them; a worker on your host claims and executes them with the `ant` CLI. Tool execution happens on your hardware, while tool inputs and outputs flow to the control plane so the model can decide what to do next.
+
+## Two credentials, strictly separated
+
+The worker holds exactly one secret: the environment key (`sk-ant-oat01-...`), Console-generated and scoped to claiming work and posting results for its own queue. Your organization API key stays off the host entirely, because agent tool calls can read the worker's environment. This separation is the reason the `.env` template has no API key field.
+
+## What a sandbox must provide
+
+The contract's runtime requirements are short: a Linux filesystem with `/bin/bash` at that exact path, a `/workspace` working directory for tool execution and skill downloads, and outbound network reach to the API. The base image adds Bun, Python, and Git as session conveniences, and nothing else; interactive agents belong in the dev stage.
+
+## Isolation modes
+
+The compose `worker` service is the always-on poller: one filesystem shared across sessions, right for a single trusted user iterating quickly. `sandbox/spawn.sh` is the per-session mode from the guide: the poller runs with `--on-work`, and every claimed item becomes a fresh `docker run --rm` container with its own workspace bind, memory, CPU, and pid limits. Session state dies with the container; deliverables survive in the per-session output directory.
+
+## The same contract on Cloudflare
+
+`backends/cloudflare/` maps the contract onto Cloudflare Sandboxes: a session becomes a `Sandbox` Durable Object instance, the image re-applies the same `ant` and Bun provisioning on Cloudflare's base, and the same poller can run inside the sandbox. What changes is who runs the container and how services inside it are exposed. The backend README carries the full mapping table.
+
+<Aside type="note">
+  MCP servers that only the agent needs are best wrapped by the worker as custom tools, which requires no inbound connectivity anywhere. The tunnel exists for the other case: humans pointing Claude Desktop or claude.ai at servers inside the sandbox network.
+</Aside>

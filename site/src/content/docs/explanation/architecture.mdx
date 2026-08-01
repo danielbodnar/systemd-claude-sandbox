@@ -1,0 +1,47 @@
+---
+title: Architecture
+description: How the compose stack, the systemd unit, the tunnel, and the two execution backends fit together, and why.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The system has a small number of parts with sharp edges between them. This page explains what each part is for and records the decisions that shaped it.
+
+## The shape of the system
+
+```text
+Anthropic control plane            Claude Desktop / claude.ai
+        ^                                      |
+        | (worker polls out)                   v (pluggable transport)
++------------------- your host: claude-sandbox.service ------------------+
+|  docker compose stack                                                  |
+|   worker (ant poller)              mcp-tunnel (Bun, :8787)             |
+|     /workspace volume      <----     routes /mcp/NAME to servers      |
+|   [cloudflared]  profile-gated publisher, decision pending             |
++------------------------------------------------------------------------+
+```
+
+Two arrows matter. The worker's arrow points outward: it polls Anthropic's queue, so the host accepts no inbound connections from Anthropic at all. The tunnel's arrow points inward from clients you choose to serve, and stays severed until a publish transport is enabled.
+
+## Why compose is the unit
+
+The first iteration of this repository built a bootable VM image with mkosi and ran it under `systemd-vmspawn --ephemeral`. Compose replaced it because the upstream sandbox pattern is container-shaped: the recommended per-session isolation is exactly a container image with the worker as entrypoint, spawned per work item. One `compose.yaml` now carries the whole stack, and image building is a Dockerfile.
+
+The trade is honest: container isolation is weaker than hardware virtualization. The clean seam for restoring the stronger boundary is the container runtime, not a second image pipeline. Pointing compose or `spawn.sh` at a VM-isolated OCI runtime such as Kata brings back hardware isolation without forking the design.
+
+## Where systemd fits
+
+One unit, `claude-sandbox.service`, brings the stack up at boot and restarts it on failure. Resource ceilings live in compose because containers run under the engine's cgroup tree, not the unit's; a slice on the unit would bound only the compose client. The unit does the two things it can do truthfully: ordering and supervision.
+
+## One image lineage
+
+`sandbox/Dockerfile` has two stages. The `sandbox` stage is the execution contract and stays minimal. The `dev` stage layers the devcontainer tooling and five coding agents on top. The Cloudflare backend cannot literally share the base (Cloudflare requires extending its image) so it re-applies the same provisioning steps with the same pinned versions, which keeps runtime contents aligned across backends.
+
+<Aside type="note">
+  The devcontainer's `dev` service runs privileged for docker-in-docker. It sits behind a compose profile precisely so that privilege never leaks into the default stack.
+</Aside>
+
+## Further reading
+
+- [The sandbox contract](../sandbox-contract/) covers the worker protocol and credentials.
+- [Transports and the open decision](../transports/) covers how the tunnel becomes reachable.

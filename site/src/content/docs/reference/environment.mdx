@@ -1,0 +1,38 @@
+---
+title: Environment variables
+description: Every variable the stack reads, where it is consumed, and which are secrets.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Variables live in `.env` at the repository root (or `/opt/claude-sandbox/.env` on a deployed host). Compose reads them at start; nothing else does.
+
+## Worker
+
+| Variable | Required | Consumed by | Purpose |
+|----------|----------|-------------|---------|
+| `ANTHROPIC_ENVIRONMENT_KEY` | yes | worker | Environment key (`sk-ant-oat01-...`) that authenticates the worker to its work queue. Console-generated, queue-scoped. |
+| `ANTHROPIC_ENVIRONMENT_ID` | yes | worker | The `self_hosted` environment's identifier. |
+| `ANTHROPIC_BASE_URL` | no | worker | API base override, passed through only when set. |
+
+<Aside type="caution">
+  Never set `ANTHROPIC_API_KEY` on the worker host. Agent tool calls can read the worker's environment, and the API key is organization-scoped. The upstream integration guide carries the same warning.
+</Aside>
+
+## Tunnel and publisher
+
+| Variable | Required | Consumed by | Purpose |
+|----------|----------|-------------|---------|
+| `MCP_TUNNEL_PORT` | no, default `8787` | compose port mapping | Loopback port the tunnel publishes on the host. |
+| `CLOUDFLARE_TUNNEL_TOKEN` | only with the cloudflared profile | cloudflared | Token-mode tunnel credential from the Zero Trust dashboard. |
+
+## Launcher
+
+| Variable | Required | Consumed by | Purpose |
+|----------|----------|-------------|---------|
+| `CLAUDE_SANDBOX_DIR` | no | `install.sh` | Clone destination, default `~/code/systemd-claude-sandbox`. |
+| `CLAUDE_SANDBOX_MODE` | no | `install.sh` | Skips detection: `compose`, `devcontainer`, `bare`, or `wsl`. |
+
+## Session environment inside sandboxes
+
+The worker exports these to each spawned session; you do not set them yourself: `ANTHROPIC_SESSION_ID`, `ANTHROPIC_WORK_ID`, `ANTHROPIC_ENVIRONMENT_ID`, `ANTHROPIC_ENVIRONMENT_KEY`, and `ANTHROPIC_BASE_URL` when present on the poller.

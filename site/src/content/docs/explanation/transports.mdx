@@ -1,0 +1,26 @@
+---
+title: Transports and the open decision
+description: How the MCP tunnel becomes reachable from outside, the three candidate transports, and why the default is proposed rather than decided.
+---
+
+The MCP tunnel listens on loopback. Making it reachable is a separate concern with its own adapter interface, and the choice of default adapter is recorded as a decision that is proposed, not accepted. This page explains the candidates and the constraint that drives the proposal; the normative record is `docs/decisions/0001-tunnel-transport.md` in the repository.
+
+## The constraint that decides it
+
+Claude Desktop can reach anything you can route to it, including a private network or a forwarded local port. claude.ai connectors cannot: they need a public HTTPS endpoint. Whichever transport becomes the default determines whether claude.ai is in scope at all.
+
+## The candidates
+
+**Cloudflare Tunnel** publishes the listener at a hostname in a DNS zone the operator controls, over an outbound-only connection. No inbound ports, TLS at the edge, and Cloudflare Access available in front. It is the only candidate that serves claude.ai connectors without exposing the host. Costs: a Cloudflare account and zone, a dependency on Cloudflare's availability, and the tunnel token as a new secret.
+
+**WireGuard** gives the strongest network posture with no third party, but every client machine needs a peer configuration, and claude.ai cannot join a private network, so it serves Claude Desktop only.
+
+**SSH forwarding** needs no new infrastructure beyond the SSH access the deploy workflow already uses, but it is per-machine, manual, and likewise cannot serve claude.ai.
+
+## Why the gates exist
+
+Until the decision is accepted, the cloudflared path is deliberately double-gated: the compose service sits behind the `cloudflared` profile, and the in-process adapter refuses to start without `--enable-cloudflared` even when the config selects it. The WireGuard and SSH adapters are stubs that fail loudly and point at the decision record. The gates make the current state legible: the interfaces are final, the default is proposed, and nothing publishes traffic by accident while the proposal is open.
+
+## An extra data point
+
+On the Cloudflare Sandboxes backend, Cloudflare Tunnel is not an optional publisher but the SDK's native path for exposing in-sandbox services. Accepting the proposal would converge both backends on the same edge.

@@ -1,0 +1,37 @@
+---
+title: systemd-claude-sandbox
+description: A self-hosted code-execution sandbox for Claude, built on docker compose and systemd, with an MCP tunnel for remote clients.
+template: splash
+hero:
+  tagline: Run Claude's code-execution sessions on hardware you control. One compose stack, one systemd unit, any Linux host.
+  actions:
+    - text: Get started
+      link: ./tutorials/getting-started/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/danielbodnar/systemd-claude-sandbox
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+<CardGrid stagger>
+  <Card title="A sandbox you own" icon="seti:docker">
+    Implements Anthropic's self-hosted sandbox contract for Claude Managed
+    Agents. Your worker polls the queue outbound; nothing on your host accepts
+    inbound connections from Anthropic.
+  </Card>
+  <Card title="One command up" icon="rocket">
+    `bash install.sh` probes your machine for Docker, Podman, Bun, WSL, and VS
+    Code, prints its reasoning, and launches the best mode it finds.
+  </Card>
+  <Card title="MCP servers, tunneled out" icon="external">
+    The bundled `mcp-tunnel` multiplexes any number of in-sandbox MCP servers
+    behind one Streamable HTTP listener, with pluggable publish transports.
+  </Card>
+  <Card title="Two runtimes, one contract" icon="cloudflare">
+    Run sessions in local containers or on Cloudflare Sandboxes. Same
+    filesystem contract, same worker, different runtime.
+  </Card>
+</CardGrid>

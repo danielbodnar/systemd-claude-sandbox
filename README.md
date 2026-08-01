@@ -1,6 +1,9 @@
 # systemd-claude-sandbox
 
-A repeatable, self-hosted code-execution sandbox for Claude, built as a docker compose stack and supervised by systemd on the bb1 server. The stack implements Anthropic's self-hosted sandbox contract for Claude Managed Agents, in which Anthropic enqueues sessions and a worker on your host polls the queue, claims work, and executes tool calls locally. A companion component, `mcp-tunnel`, exposes MCP servers running inside the sandbox network to remote clients such as Claude Desktop and claude.ai.
+A repeatable, self-hosted code-execution sandbox for Claude, built as a docker compose stack and supervised by systemd on any Linux host you control. The stack implements Anthropic's self-hosted sandbox contract for Claude Managed Agents, in which Anthropic enqueues sessions and a worker on your host polls the queue, claims work, and executes tool calls locally. A companion component, `mcp-tunnel`, exposes MCP servers running inside the sandbox network to remote clients such as Claude Desktop and claude.ai.
+
+> [!NOTE]
+> Full documentation lives in the Starlight site under [`site/`](site/), organized as a tutorial, how-to guides, reference, and explanation. Once published, it deploys automatically to [danielbodnar.github.io/systemd-claude-sandbox](https://danielbodnar.github.io/systemd-claude-sandbox/) on every push to main; run it locally with `just docs-dev`. This README is the short version; the site is the deep dive.
 
 ## The contract this implements
 
@@ -14,19 +17,19 @@ MCP servers that should stay private are not exposed to Anthropic's MCP connecto
 
 ## Architecture
 
-```
-Anthropic control plane                Claude Desktop / claude.ai
-        |  (worker polls out)                  |  (transport: pluggable)
-        v                                      v
-+---------------------- bb1: claude-sandbox.service ---------------------+
-|  docker compose stack                                                  |
-|                                                                        |
-|   worker (ant beta:worker poll)      mcp-tunnel (Bun, :8787)           |
-|     /workspace volume        <-----    routes /mcp/<name> to           |
-|     bash, bun, python, git            MCP servers on the sandbox net   |
-|                                                                        |
-|   [cloudflared]  profile-gated publisher, decision pending             |
-+------------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    AP[Anthropic control plane]
+    CD[Claude Desktop / claude.ai]
+    subgraph HOST[your host · claude-sandbox.service · docker compose]
+        W["worker<br/>ant beta:worker poll<br/>bash · bun · python · /workspace"]
+        T["mcp-tunnel<br/>Bun · :8787"]
+        M[MCP servers on the sandbox network]
+        CF["cloudflared<br/>profile-gated, decision pending"]
+    end
+    W -- polls outbound --> AP
+    CD -- pluggable transport --> CF --> T
+    T -- "routes /mcp/&lt;name&gt;" --> M
 ```
 
 `compose.yaml` is the repeatable unit. The `worker` service runs the always-on poller. For stronger isolation, `sandbox/spawn.sh` implements the upstream spawn-per-session pattern: the poller runs on the host with `--on-work`, and every claimed session gets a fresh `docker run --rm` container and its own output directory.
@@ -42,8 +45,8 @@ systemd's role is deliberately small. `host/systemd/claude-sandbox.service` brin
 | `compose.yaml` | The stack: worker, mcp-tunnel, profile-gated cloudflared |
 | `sandbox/` | Worker image (Dockerfile) and spawn-per-session script |
 | `mcp-tunnel/` | Bun and strict TypeScript MCP reverse proxy with pluggable publish transports |
-| `host/systemd/` | The one unit that supervises the stack on bb1 |
-| `scripts/deploy-bb1.sh` | Host-side installer, invoked by `just deploy` |
+| `host/systemd/` | The one unit that supervises the stack on the deploy host |
+| `scripts/deploy.sh` | Host-side installer, invoked by `just deploy` |
 | `examples/tunnel.jsonc` | Tunnel route configuration |
 | `backends/cloudflare/` | Alternative execution backend on Cloudflare Sandboxes (same contract, different runtime) |
 | `docs/` | Architecture notes and decision records |
@@ -51,7 +54,15 @@ systemd's role is deliberately small. `host/systemd/claude-sandbox.service` brin
 
 ## Quick start
 
-Local bring-up:
+The fastest path on any machine is the launcher script, which clones the repository if needed, probes the host for git, bun, docker or podman, compose, just, the devcontainers CLI, VS Code, and WSL, prints its decision trail, and picks the best launch mode: the compose stack when a compose-capable engine exists, the devcontainer when only Docker plus tooling exists, bare-metal bun development as the floor, and on native Windows the WSL path first, with an interactive menu instead of a failure when nothing fits. It never starts the devcontainer without Docker, delegates the actual work to the justfile, and is safe to re-run over an existing clone. From PowerShell, invoke it through WSL or Git Bash as the header explains; force a mode with `CLAUDE_SANDBOX_MODE=compose|devcontainer|bare|wsl`.
+
+```sh
+bash install.sh
+```
+
+![install.sh probing the host and choosing a launch mode](.tapes/out/install.gif)
+
+Manual local bring-up:
 
 ```sh
 cp .env.example .env      # fill in ANTHROPIC_ENVIRONMENT_KEY and _ID
@@ -68,6 +79,21 @@ just typecheck
 just test
 just tunnel-dev
 ```
+
+### Lifecycle scripts
+
+The repository is also a Bun workspace (`mcp-tunnel`, `site`, `backends/cloudflare`), and the root `package.json` exposes the workflow as npm-ecosystem lifecycle scripts. The justfile remains the source of truth; the scripts are thin wrappers that delegate to it or to per-workspace scripts through `bun run --filter`.
+
+```sh
+bun install              # one root lockfile for all three workspaces
+bun run build            # tunnel typecheck + tests, backend typecheck, site build
+bun run test             # tunnel test suite
+bun run typecheck        # tunnel and Cloudflare backend
+bun run docs:dev         # Starlight dev server
+bun run deploy -- host=MY-SERVER   # passes through to just deploy
+```
+
+Arguments after `--` pass through to the underlying just recipe, which is how `deploy` receives its host.
 
 ## Devcontainer
 
@@ -101,21 +127,32 @@ Two clarifications from resolving the upstreams. OpenChamber is not a standalone
 
 A trust note, stated plainly: jcode (MIT, 1jehuang/jcode) and OpenChamber (MIT, openchamber/openchamber) are young community projects that have not been reviewed the way the Anthropic, sst, and GitHub tooling has, and this dev image is privileged for docker-in-docker. The jcode binary is checksum-pinned and every version bump is a deliberate edit, but running unreviewed agents in a privileged container is a real trade-off; keep them out of the base sandbox image (they are dev-stage only) and prefer the firewall-enabled workflow when exercising them.
 
-## Deployment to bb1
+## Deployment to a self-hosted server
 
-Remote recipes reference the `bb1` SSH host alias from your SSH config; the justfile carries no host, port, or user data. Deployment is a manual step:
+The remote workflow targets any Linux host reachable over SSH that runs systemd and Docker with the compose plugin. Recipes take the host as an argument, so any alias or `user@host` from your SSH config works and the justfile carries no host data. Deployment is a manual step:
 
 ```sh
-just deploy          # rsync stack to bb1, build images, install the unit
-just remote-up       # systemctl start claude-sandbox.service
-just remote-status
+just deploy host=my-server        # rsync stack, build images, install the unit
+just remote-up host=my-server     # systemctl start claude-sandbox.service
+just remote-status host=my-server
 ```
 
 The installer stages the stack in `/opt/claude-sandbox`, seeds `/opt/claude-sandbox/.env` from the example if absent, and installs the systemd unit. Fill in the environment key on the host before starting.
 
 ## Alternative backend: Cloudflare Sandboxes
 
-`backends/cloudflare/` implements the same execution contract on Cloudflare's Sandbox SDK (GA since April 2026): sessions become `Sandbox` Durable Object instances, the container image re-applies the same provisioning (ant CLI, Bun) on Cloudflare's base image, the same `ant beta:worker poll` can run inside a sandbox, and in-sandbox MCP servers are exposed through the SDK's native cloudflared tunnels instead of mcp-tunnel. The Worker typechecks today; everything requiring an authenticated wrangler (secrets, dev, deploy) is documented in `backends/cloudflare/README.md` as run-later steps, in the same spirit as the bb1 deploy.
+`backends/cloudflare/` implements the same execution contract on Cloudflare's Sandbox SDK (GA since April 2026): sessions become `Sandbox` Durable Object instances, the container image re-applies the same provisioning (ant CLI, Bun) on Cloudflare's base image, the same `ant beta:worker poll` can run inside a sandbox, and in-sandbox MCP servers are exposed through the SDK's native cloudflared tunnels instead of mcp-tunnel. The Worker typechecks today; everything requiring an authenticated wrangler (secrets, dev, deploy) is documented in `backends/cloudflare/README.md` as run-later steps, in the same spirit as the SSH deploy.
+
+## Documentation, tours, and tapes
+
+Three layers of documentation serve three ways of learning. The [Starlight site](site/) carries the tutorial, how-to guides, reference tables, and explanations, and builds with `just docs-build` (link validation included). The [CodeTour](https://marketplace.visualstudio.com/items?itemName=vsls-contrib.codetour) in [`.tours/architecture.tour`](.tours/architecture.tour) walks a newcomer through the code itself, file by file, inside VS Code. The [VHS](https://github.com/charmbracelet/vhs) tapes in [`.tapes/`](.tapes/) script the key flows; render them to GIFs with `just tapes`, after which the images referenced here and in the site light up:
+
+| Tape | Shows |
+|------|-------|
+| `install.tape` | The launcher's probe and decision trail |
+| `stack-up.tape` | `just build`, `just up`, healthy services |
+| `devcontainer.tape` | Devcontainer launch and the five agents responding |
+| `mcp-tunnel.tape` | The tunnel starting and answering `/healthz` |
 
 ## Plugin marketplace
 
@@ -126,12 +163,14 @@ The repository doubles as a Claude Code plugin marketplace. `.claude-plugin/mark
 The repository is created and pushed once with:
 
 ```sh
-just publish         # gh repo create danielbodnar/systemd-claude-sandbox --private --source=. --push
+just publish
 ```
+
+The recipe creates the private repository if it is missing, pushes main, and enables GitHub Pages with the Actions source through the API. The docs workflow (`.github/workflows/docs.yml`) then builds `site/` with Bun and deploys it on every push to main. If the Pages API call fails, flip it manually once: Settings, then Pages, then Source: GitHub Actions.
 
 ## Open decision: tunnel publish transport
 
-How `mcp-tunnel` becomes reachable from outside bb1 is proposed but not confirmed. Cloudflare Tunnel is the proposed default, with WireGuard and plain SSH forwarding as alternatives. The interfaces in `mcp-tunnel/src/transport/` are final and the cloudflared path is scaffolded behind a flag and a compose profile. See `docs/decisions/0001-tunnel-transport.md` and do not implement further until it is accepted.
+How `mcp-tunnel` becomes reachable from outside the deploy host is proposed but not confirmed. Cloudflare Tunnel is the proposed default, with WireGuard and plain SSH forwarding as alternatives. The interfaces in `mcp-tunnel/src/transport/` are final and the cloudflared path is scaffolded behind a flag and a compose profile. See `docs/decisions/0001-tunnel-transport.md` and do not implement further until it is accepted.
 
 ## Versions verified against
 

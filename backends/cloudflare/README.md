@@ -1,6 +1,6 @@
 # Cloudflare Sandboxes backend
 
-An alternative execution backend for the Claude self-hosted sandbox: the same contract as the local compose stack, running on Cloudflare's Sandbox SDK (generally available since April 2026) instead of Docker on bb1. A session is still an isolated Linux container with `/bin/bash`, a `/workspace` directory, Bun, Python, and the `ant` CLI; what changes is who runs the container and how it is reached.
+An alternative execution backend for the Claude self-hosted sandbox: the same contract as the local compose stack, running on Cloudflare's Sandbox SDK (generally available since April 2026) instead of Docker on a self-hosted server. A session is still an isolated Linux container with `/bin/bash`, a `/workspace` directory, Bun, Python, and the `ant` CLI; what changes is who runs the container and how it is reached.
 
 ## Contract mapping
 
@@ -11,7 +11,7 @@ An alternative execution backend for the Claude self-hosted sandbox: the same co
 | Anthropic worker | compose `worker` service runs `ant beta:worker poll` | `POST /sessions/:id/ant` starts the same poller inside the sandbox |
 | MCP exposure | `mcp-tunnel` plus a publish transport | `sandbox.tunnels.get(port)` (cloudflared quick tunnel) or `exposePort()` preview URLs |
 | Egress control | vendored `init-firewall.sh`, compose network | SDK outbound handlers (`setOutboundHandler`) |
-| Supervision | systemd unit on bb1 | Cloudflare's control plane |
+| Supervision | systemd unit on the deploy host | Cloudflare's control plane |
 
 Cloudflare requires containers to extend its base image, so this backend cannot share the Debian base image literally. The Dockerfile instead re-applies the identical provisioning steps (same `ant` and Bun versions, same install commands) on top of `cloudflare/sandbox`, which keeps the runtime contents aligned. Version bumps should touch both Dockerfiles together.
 

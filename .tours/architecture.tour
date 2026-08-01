@@ -1,0 +1,62 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Architecture walkthrough",
+  "description": "A newcomer's tour of the sandbox stack: the compose services, the execution contract, the MCP tunnel, the Cloudflare backend, and the launcher.",
+  "isPrimary": true,
+  "steps": [
+    {
+      "file": "compose.yaml",
+      "line": 1,
+      "title": "The stack in one file",
+      "description": "Everything runs from this compose file. Two services form the default stack (worker and mcp-tunnel), and two more sit behind profiles: the privileged devcontainer service and the cloudflared publisher. Credentials come from .env, and the file comments explain why the organization API key must never appear here."
+    },
+    {
+      "file": "compose.yaml",
+      "line": 20,
+      "title": "The worker service",
+      "description": "The worker polls Anthropic's queue outbound with `ant beta:worker poll`. No inbound connection from Anthropic ever reaches this host. The image's default entrypoint runs one session and exits; this service overrides it to poll forever."
+    },
+    {
+      "file": "sandbox/Dockerfile",
+      "line": 1,
+      "title": "One image lineage, two stages",
+      "description": "The `sandbox` stage is the execution contract from Anthropic's self-hosted sandboxes guide: /bin/bash at that exact path, /workspace as the working directory, the ant CLI, plus Bun and Python for sessions. The `dev` stage below layers the devcontainer tooling and five coding agents on top. Base stays minimal; dev carries the weight."
+    },
+    {
+      "file": "sandbox/spawn.sh",
+      "line": 1,
+      "title": "Per-session isolation",
+      "description": "The alternative to the always-on poller: run the poller with --on-work pointing here, and every claimed work item becomes a fresh `docker run --rm` container with its own workspace, memory, CPU, and pid limits. Session state dies with the container."
+    },
+    {
+      "file": "mcp-tunnel/src/proxy.ts",
+      "line": 1,
+      "title": "The MCP tunnel",
+      "description": "One listener multiplexes any number of in-sandbox MCP servers under /mcp/<name>. The proxy is protocol-transparent: it forwards any method and streams bodies both ways, so both current and older MCP Streamable HTTP revisions pass through without the proxy tracking sessions."
+    },
+    {
+      "file": "mcp-tunnel/src/transport/types.ts",
+      "line": 1,
+      "title": "Pluggable publish transports",
+      "description": "A transport is a plain async function that makes the local listener reachable and returns a stop handle. Cloudflare Tunnel is the proposed default, double-gated until docs/decisions/0001-tunnel-transport.md is accepted; WireGuard and SSH are intentional stubs."
+    },
+    {
+      "file": "backends/cloudflare/src/index.ts",
+      "line": 1,
+      "title": "The same contract on Cloudflare",
+      "description": "An alternative runtime, not a fork: sessions become Sandbox Durable Object instances, the container image re-applies the same ant and Bun provisioning on Cloudflare's base image, and the same worker can poll from inside a sandbox. Everything needing an authenticated wrangler is a documented run-later step."
+    },
+    {
+      "file": "host/systemd/claude-sandbox.service",
+      "line": 1,
+      "title": "systemd's honest job",
+      "description": "One unit supervises the stack on a deployed host: boot ordering and restart policy. Resource ceilings live in compose because containers run under the engine's cgroup tree, not this unit's."
+    },
+    {
+      "file": "install.sh",
+      "line": 1,
+      "title": "The launcher",
+      "description": "Cross-platform entry point. It probes for git, bun, docker or podman, compose, just, the devcontainers CLI, VS Code, and WSL, prints its decision trail, and picks compose, devcontainer, bare-metal bun, or the WSL path. When nothing fits it asks instead of failing."
+    }
+  ]
+}

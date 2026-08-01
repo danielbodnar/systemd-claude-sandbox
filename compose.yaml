@@ -52,7 +52,9 @@ services:
   # revision 2026-07-28) on one local port. Publishing beyond localhost is
   # the job of a transport adapter, not this service.
   mcp-tunnel:
-    build: ./mcp-tunnel
+    build:
+      context: .
+      dockerfile: mcp-tunnel/Dockerfile
     image: claude-sandbox-mcp-tunnel:latest
     command: ["--config", "/etc/mcp-tunnel/tunnel.jsonc"]
     volumes:
@@ -101,10 +103,16 @@ services:
   # The tunnel token is created in the Cloudflare Zero Trust dashboard with
   # an ingress rule pointing at http://mcp-tunnel:8787. Pin the image tag
   # once the transport decision is accepted.
+  #
+  # The token must NOT use the `:?` required-variable form. Compose
+  # interpolates every service in the file regardless of active profiles, so
+  # `:?` here fails `build`, `up`, and `config` for everyone who has not set
+  # a Cloudflare token — including the default path, where this service never
+  # starts. Missing tokens surface when the profile is actually enabled.
   cloudflared:
     profiles: [cloudflared]
     image: cloudflare/cloudflared:latest
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?set in .env}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
     networks: [sandbox]
     restart: unless-stopped
 
