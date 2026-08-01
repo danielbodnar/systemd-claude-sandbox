@@ -1,0 +1,39 @@
+---
+title: Compose services
+description: Every service, network, volume, and profile in compose.yaml.
+---
+
+The stack is defined in a single `compose.yaml` under the project name `claude-sandbox`.
+
+## Services
+
+### worker
+
+The always-on poller. Builds the `sandbox` stage of `sandbox/Dockerfile` and overrides the image entrypoint to `ant beta:worker poll --workdir /workspace`. Reads the two required Anthropic variables, mounts the shared `workspace` volume, and runs with 2 CPUs, 3 GB memory, and `no-new-privileges`. Restart policy is `unless-stopped`.
+
+The image's default entrypoint (`ant beta:worker run`) exists for the alternative spawn-per-session mode driven by `sandbox/spawn.sh`, where each claimed work item gets a fresh `docker run --rm` container.
+
+### mcp-tunnel
+
+The Streamable HTTP reverse proxy. Builds from `mcp-tunnel/Dockerfile` (Bun, no build step), reads `examples/tunnel.jsonc` mounted read-only at `/etc/mcp-tunnel/tunnel.jsonc`, and publishes `127.0.0.1:8787` on the host. Loopback only by design; a publish transport makes it reachable.
+
+### dev <small>(profile: `dev`)</small>
+
+The devcontainer service consumed by `.devcontainer/devcontainer.json`. Builds the `dev` stage, binds the repository at `/workspace`, and persists Claude Code state and shell history in named volumes. Runs privileged for the docker-in-docker feature with `NET_ADMIN` and `NET_RAW` for the firewall script. Never part of the default stack.
+
+### cloudflared <small>(profile: `cloudflared`)</small>
+
+Token-mode `cloudflared` publisher for the tunnel. Gated behind its profile pending the transport decision. The image tag is unpinned until that decision is accepted.
+
+## Networks and volumes
+
+| Name | Kind | Purpose |
+|------|------|---------|
+| `sandbox` | network | Shared by all services; the tunnel reaches MCP servers by service name |
+| `workspace` | volume | Session working directory, `/workspace` in the worker |
+| `claude-code-config` | volume | Claude Code state for the dev container |
+| `command-history` | volume | Shell history for the dev container |
+
+## Profiles
+
+Running `docker compose up` starts `worker` and `mcp-tunnel` only. Add `--profile dev` for the devcontainer service or `--profile cloudflared` for the publisher; `just up-cloudflared` wraps the latter.

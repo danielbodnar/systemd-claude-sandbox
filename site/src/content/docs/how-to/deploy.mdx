@@ -1,0 +1,63 @@
+---
+title: Deploy to your own host
+description: Install the sandbox stack as a supervised systemd service on any Linux server reachable over SSH.
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components";
+
+This guide installs the stack under `/opt/claude-sandbox` on a remote server and supervises it with systemd, so it survives reboots and restarts on failure.
+
+## Prerequisites
+
+- A Linux host running systemd and Docker with the compose plugin
+- SSH access with sudo, ideally as an alias in your `~/.ssh/config`
+- A local clone of this repository with `just` installed
+
+## Deploy
+
+<Steps>
+
+1. Stage and install the stack. Replace `MY-SERVER` with your SSH alias or `user@host`.
+
+   ```bash
+   just deploy host=MY-SERVER
+   ```
+
+   The recipe rsyncs the repository (excluding secrets and build artifacts) to a staging directory, then runs `scripts/deploy.sh` on the host, which installs to `/opt/claude-sandbox`, builds the images, and installs the systemd unit. The script checks nothing into place twice; re-running it is safe.
+
+2. Fill in credentials on the host, first deploy only.
+
+   ```bash
+   ssh MY-SERVER sudo nano /opt/claude-sandbox/.env
+   ```
+
+   The installer seeds `.env` from the example when it is missing and reminds you on stdout.
+
+3. Start and enable the service.
+
+   ```bash
+   just remote-up host=MY-SERVER
+   just remote-status host=MY-SERVER
+   ```
+
+4. Follow logs when you need them.
+
+   ```bash
+   just remote-logs host=MY-SERVER
+   ```
+
+</Steps>
+
+<Aside type="note">
+  Container resource limits live in `compose.yaml`, not in the systemd unit. Containers run under the container engine's cgroup tree, so limits on the unit would only bound the compose client process. The unit's honest jobs are boot ordering and restart policy.
+</Aside>
+
+## Roll back or remove
+
+Stop the service and remove the unit and directory; nothing else is touched.
+
+```bash
+ssh MY-SERVER "sudo systemctl disable --now claude-sandbox.service"
+ssh MY-SERVER "sudo rm -rf /opt/claude-sandbox /etc/systemd/system/claude-sandbox.service"
+ssh MY-SERVER "sudo systemctl daemon-reload"
+```

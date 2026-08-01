@@ -96,6 +96,22 @@ cf-dev:
 cf-deploy:
     cd backends/cloudflare && bunx wrangler deploy
 
+# --- documentation ----------------------------------------------------------
+
+# Starlight dev server for the docs site.
+docs-dev:
+    cd site && bun install && bun run dev
+
+# Production build with link validation.
+docs-build:
+    cd site && bun install && bun run build
+
+# Render every VHS tape in .tapes/ to GIFs under .tapes/out/.
+# Requires charmbracelet/vhs (https://github.com/charmbracelet/vhs).
+tapes:
+    mkdir -p .tapes/out
+    for tape in .tapes/*.tape; do vhs "$tape"; done
+
 # --- repo -------------------------------------------------------------------
 
 # Create the private GitHub repo if missing and push (idempotent, needs gh

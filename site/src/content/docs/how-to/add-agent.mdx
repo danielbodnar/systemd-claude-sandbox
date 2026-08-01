@@ -1,0 +1,47 @@
+---
+title: Add an agent to the dev image
+description: Extend the dev stage of the sandbox Dockerfile with another coding agent, pinned and documented.
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components";
+
+The dev image already ships Claude Code, jcode, opencode, OpenChamber, and the GitHub Copilot CLI. This guide shows the pattern for adding another, using the conventions the existing five follow.
+
+## The pattern
+
+Every agent addition has three parts: a pinned version as a build argument, an install step using the upstream-documented method, and a row in the README's agents table covering the entry point and auth.
+
+<Steps>
+
+1. Add a version argument to the `dev` stage in `sandbox/Dockerfile`.
+
+   ```dockerfile
+   ARG MYAGENT_VERSION=1.2.3
+   ```
+
+2. Install with the upstream method. Prefer a checksum-verified release binary for young projects, and npm with an exact pin for npm-distributed tools.
+
+   ```dockerfile
+   RUN npm install -g --no-fund --no-audit "myagent-cli@${MYAGENT_VERSION}"
+   ```
+
+   For a release binary, follow the jcode block in the same file: download the tarball and the published checksums, verify with `sha256sum -c`, then extract into `/usr/local/bin`.
+
+3. Rebuild the dev image and confirm the entry point resolves.
+
+   ```bash
+   docker compose --profile dev build dev
+   docker compose --profile dev run --rm dev myagent --version
+   ```
+
+4. Document it. Add a row to the coding agents table in the README with the entry point, install source, and auth steps.
+
+</Steps>
+
+<Aside type="caution">
+  The dev container runs privileged for docker-in-docker. Installing an unreviewed third-party agent into it is a real trust decision, not a formality. Keep additions out of the base `sandbox` stage, pin exact versions so upgrades are deliberate edits, and prefer running new agents with the firewall applied.
+</Aside>
+
+## Where things go
+
+Agents belong in the `dev` stage only. The base `sandbox` stage is the execution contract for Anthropic sessions (bash, Bun, Python, the `ant` CLI) and stays minimal so session cold starts stay fast.

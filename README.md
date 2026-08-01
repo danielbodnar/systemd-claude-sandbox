@@ -2,6 +2,9 @@
 
 A repeatable, self-hosted code-execution sandbox for Claude, built as a docker compose stack and supervised by systemd on any Linux host you control. The stack implements Anthropic's self-hosted sandbox contract for Claude Managed Agents, in which Anthropic enqueues sessions and a worker on your host polls the queue, claims work, and executes tool calls locally. A companion component, `mcp-tunnel`, exposes MCP servers running inside the sandbox network to remote clients such as Claude Desktop and claude.ai.
 
+> [!NOTE]
+> Full documentation lives in the Starlight site under [`site/`](site/), organized as a tutorial, how-to guides, reference, and explanation. Run it locally with `just docs-dev`. This README is the short version; the site is the deep dive.
+
 ## The contract this implements
 
 The authoritative reference is the Managed Agents self-hosted sandboxes guide (platform.claude.com/docs/en/managed-agents/self-hosted-sandboxes). The essentials the stack is built around:
@@ -14,19 +17,19 @@ MCP servers that should stay private are not exposed to Anthropic's MCP connecto
 
 ## Architecture
 
-```
-Anthropic control plane                Claude Desktop / claude.ai
-        |  (worker polls out)                  |  (transport: pluggable)
-        v                                      v
-+----------------- your host: claude-sandbox.service --------------------+
-|  docker compose stack                                                  |
-|                                                                        |
-|   worker (ant beta:worker poll)      mcp-tunnel (Bun, :8787)           |
-|     /workspace volume        <-----    routes /mcp/<name> to           |
-|     bash, bun, python, git            MCP servers on the sandbox net   |
-|                                                                        |
-|   [cloudflared]  profile-gated publisher, decision pending             |
-+------------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    AP[Anthropic control plane]
+    CD[Claude Desktop / claude.ai]
+    subgraph HOST[your host · claude-sandbox.service · docker compose]
+        W["worker<br/>ant beta:worker poll<br/>bash · bun · python · /workspace"]
+        T["mcp-tunnel<br/>Bun · :8787"]
+        M[MCP servers on the sandbox network]
+        CF["cloudflared<br/>profile-gated, decision pending"]
+    end
+    W -- polls outbound --> AP
+    CD -- pluggable transport --> CF --> T
+    T -- "routes /mcp/&lt;name&gt;" --> M
 ```
 
 `compose.yaml` is the repeatable unit. The `worker` service runs the always-on poller. For stronger isolation, `sandbox/spawn.sh` implements the upstream spawn-per-session pattern: the poller runs on the host with `--on-work`, and every claimed session gets a fresh `docker run --rm` container and its own output directory.
@@ -56,6 +59,8 @@ The fastest path on any machine is the launcher script, which clones the reposit
 ```sh
 bash install.sh
 ```
+
+![install.sh probing the host and choosing a launch mode](.tapes/out/install.gif)
 
 Manual local bring-up:
 
@@ -122,6 +127,17 @@ The installer stages the stack in `/opt/claude-sandbox`, seeds `/opt/claude-sand
 ## Alternative backend: Cloudflare Sandboxes
 
 `backends/cloudflare/` implements the same execution contract on Cloudflare's Sandbox SDK (GA since April 2026): sessions become `Sandbox` Durable Object instances, the container image re-applies the same provisioning (ant CLI, Bun) on Cloudflare's base image, the same `ant beta:worker poll` can run inside a sandbox, and in-sandbox MCP servers are exposed through the SDK's native cloudflared tunnels instead of mcp-tunnel. The Worker typechecks today; everything requiring an authenticated wrangler (secrets, dev, deploy) is documented in `backends/cloudflare/README.md` as run-later steps, in the same spirit as the SSH deploy.
+
+## Documentation, tours, and tapes
+
+Three layers of documentation serve three ways of learning. The [Starlight site](site/) carries the tutorial, how-to guides, reference tables, and explanations, and builds with `just docs-build` (link validation included). The [CodeTour](https://marketplace.visualstudio.com/items?itemName=vsls-contrib.codetour) in [`.tours/architecture.tour`](.tours/architecture.tour) walks a newcomer through the code itself, file by file, inside VS Code. The [VHS](https://github.com/charmbracelet/vhs) tapes in [`.tapes/`](.tapes/) script the key flows; render them to GIFs with `just tapes`, after which the images referenced here and in the site light up:
+
+| Tape | Shows |
+|------|-------|
+| `install.tape` | The launcher's probe and decision trail |
+| `stack-up.tape` | `just build`, `just up`, healthy services |
+| `devcontainer.tape` | Devcontainer launch and the five agents responding |
+| `mcp-tunnel.tape` | The tunnel starting and answering `/healthz` |
 
 ## Plugin marketplace
 

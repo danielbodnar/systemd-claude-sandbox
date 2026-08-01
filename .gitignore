@@ -11,3 +11,7 @@ node_modules/
 
 # per-session sandbox outputs when testing spawn.sh locally
 outputs/
+
+# docs site build artifacts
+site/dist/
+site/.astro/
