@@ -1,0 +1,80 @@
+# Claude self-hosted sandbox stack. This file is the repeatable unit:
+# `docker compose up` brings up the worker and the MCP tunnel; the
+# cloudflared publisher stays behind a profile until the transport decision
+# in docs/decisions/0001-tunnel-transport.md is accepted.
+#
+# Credentials come from .env (see .env.example). Only the environment key
+# belongs on this host. Never put ANTHROPIC_API_KEY here; the upstream guide
+# warns that doing so exposes an organization-scoped credential to agent
+# tool calls.
+
+name: claude-sandbox
+
+services:
+  # Always-on worker: polls the environment work queue and executes sessions
+  # in-place. For stronger per-session isolation, run sandbox/spawn.sh via
+  # `ant beta:worker poll --on-work` on the host instead; the image's default
+  # entrypoint (ant beta:worker run) exists for exactly that mode.
+  worker:
+    build: ./sandbox
+    image: claude-sandbox-worker:latest
+    entrypoint: ["ant", "beta:worker", "poll", "--workdir", "/workspace"]
+    environment:
+      ANTHROPIC_ENVIRONMENT_KEY: ${ANTHROPIC_ENVIRONMENT_KEY:?set in .env}
+      ANTHROPIC_ENVIRONMENT_ID: ${ANTHROPIC_ENVIRONMENT_ID:?set in .env}
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
+    volumes:
+      - workspace:/workspace
+    networks: [sandbox]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 3g
+    security_opt:
+      - no-new-privileges:true
+
+  # Example MCP server living next to the worker on the sandbox network.
+  # Replace or multiply as needed; the tunnel reaches it by service name.
+  # mcp-filesystem:
+  #   image: claude-sandbox-worker:latest
+  #   entrypoint: ["bunx", "@modelcontextprotocol/server-filesystem",
+  #                "--http", "--port", "9101", "/workspace"]
+  #   volumes: [workspace:/workspace]
+  #   networks: [sandbox]
+  #   restart: unless-stopped
+
+  # Reverse proxy exposing in-sandbox MCP servers (Streamable HTTP, spec
+  # revision 2026-07-28) on one local port. Publishing beyond localhost is
+  # the job of a transport adapter, not this service.
+  mcp-tunnel:
+    build: ./mcp-tunnel
+    image: claude-sandbox-mcp-tunnel:latest
+    command: ["--config", "/etc/mcp-tunnel/tunnel.jsonc"]
+    volumes:
+      - ./examples/tunnel.jsonc:/etc/mcp-tunnel/tunnel.jsonc:ro
+    ports:
+      - "127.0.0.1:${MCP_TUNNEL_PORT:-8787}:8787"
+    networks: [sandbox]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # PROPOSED default publish transport, pending confirmation. Enable with:
+  #   docker compose --profile cloudflared up -d
+  # The tunnel token is created in the Cloudflare Zero Trust dashboard with
+  # an ingress rule pointing at http://mcp-tunnel:8787. Pin the image tag
+  # once the transport decision is accepted.
+  cloudflared:
+    profiles: [cloudflared]
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?set in .env}
+    networks: [sandbox]
+    restart: unless-stopped
+
+networks:
+  sandbox: {}
+
+volumes:
+  workspace: {}

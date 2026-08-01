@@ -1,0 +1,22 @@
+# Brings the compose stack up on the host and supervises it. Container
+# resource bounds live in compose.yaml, not here: containers run under the
+# container engine's cgroup tree, so slice or unit limits on this service
+# would bound only the compose client process.
+
+[Unit]
+Description=Claude self-hosted sandbox stack (docker compose)
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=exec
+WorkingDirectory=/opt/claude-sandbox
+# .env in the working directory supplies credentials to compose.
+ExecStart=/usr/bin/docker compose up --remove-orphans
+ExecStop=/usr/bin/docker compose down
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

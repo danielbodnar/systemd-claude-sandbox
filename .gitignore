@@ -1,0 +1,12 @@
+# local quarantine for files pending manual deletion
+.attic/
+
+# JS tooling
+node_modules/
+
+# secrets and local state
+.env
+*.log
+
+# per-session sandbox outputs when testing spawn.sh locally
+outputs/
