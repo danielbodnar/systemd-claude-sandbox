@@ -4,7 +4,7 @@
 # Idempotent. Requires docker with the compose plugin.
 set -euo pipefail
 
-STAGE="${1:?usage: deploy-bb1.sh <staging-dir>}"
+STAGE="${1:?usage: deploy.sh <staging-dir>}"
 DEST=/opt/claude-sandbox
 
 echo "==> staging stack into ${DEST}"

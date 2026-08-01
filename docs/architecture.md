@@ -2,7 +2,7 @@
 
 ## Contract first
 
-The design follows the Managed Agents self-hosted sandbox guide rather than inventing a sandbox API. Anthropic's control plane holds the queue; nothing on bb1 accepts inbound connections from Anthropic. The worker authenticates with an environment key scoped to posting results for its own queue, which is why the stack never sees the organization API key. Session inputs that would normally be mounted by Anthropic (files, repositories) do not exist on self-hosted sandboxes; anything the session needs is passed through session `metadata` and fetched by the worker or the session itself.
+The design follows the Managed Agents self-hosted sandbox guide rather than inventing a sandbox API. Anthropic's control plane holds the queue; nothing on the deploy host accepts inbound connections from Anthropic. The worker authenticates with an environment key scoped to posting results for its own queue, which is why the stack never sees the organization API key. Session inputs that would normally be mounted by Anthropic (files, repositories) do not exist on self-hosted sandboxes; anything the session needs is passed through session `metadata` and fetched by the worker or the session itself.
 
 ## Two isolation modes
 
@@ -12,7 +12,7 @@ The compose `worker` service is the always-on poller: simple, fast, one filesyst
 
 ## Where systemd fits now
 
-The first iteration of this repository built a bootable VM image with mkosi and ran it under `systemd-vmspawn --ephemeral`, with a slice hierarchy and networkd files in the style of the BitBuilder hypervisor. The runtime pivoted to docker compose, which collapses most of that machinery: image building becomes a Dockerfile, per-session ephemerality becomes `docker run --rm`, and the network becomes a compose network.
+The first iteration of this repository built a bootable VM image with mkosi and ran it under `systemd-vmspawn --ephemeral`, with a full slice hierarchy and networkd configuration on the host. The runtime pivoted to docker compose, which collapses most of that machinery: image building becomes a Dockerfile, per-session ephemerality becomes `docker run --rm`, and the network becomes a compose network.
 
 There is a real tension worth recording. Container isolation is weaker than hardware virtualization, and the vmspawn design offered a stronger boundary for hostile code at the cost of a second image pipeline. The compose-first layout keeps exactly one pipeline, per the direction to not build both. If the stronger boundary is wanted later, the clean seam is the container runtime, not a parallel image build: point the compose services or `spawn.sh` at a VM-isolated OCI runtime rather than reintroducing mkosi. The remaining systemd surface is a single supervising unit, `claude-sandbox.service`, which is honest about what it can control: restart policy and boot ordering, not container cgroups.
 

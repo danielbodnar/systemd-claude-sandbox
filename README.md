@@ -1,6 +1,6 @@
 # systemd-claude-sandbox
 
-A repeatable, self-hosted code-execution sandbox for Claude, built as a docker compose stack and supervised by systemd on the bb1 server. The stack implements Anthropic's self-hosted sandbox contract for Claude Managed Agents, in which Anthropic enqueues sessions and a worker on your host polls the queue, claims work, and executes tool calls locally. A companion component, `mcp-tunnel`, exposes MCP servers running inside the sandbox network to remote clients such as Claude Desktop and claude.ai.
+A repeatable, self-hosted code-execution sandbox for Claude, built as a docker compose stack and supervised by systemd on any Linux host you control. The stack implements Anthropic's self-hosted sandbox contract for Claude Managed Agents, in which Anthropic enqueues sessions and a worker on your host polls the queue, claims work, and executes tool calls locally. A companion component, `mcp-tunnel`, exposes MCP servers running inside the sandbox network to remote clients such as Claude Desktop and claude.ai.
 
 ## The contract this implements
 
@@ -18,7 +18,7 @@ MCP servers that should stay private are not exposed to Anthropic's MCP connecto
 Anthropic control plane                Claude Desktop / claude.ai
         |  (worker polls out)                  |  (transport: pluggable)
         v                                      v
-+---------------------- bb1: claude-sandbox.service ---------------------+
++----------------- your host: claude-sandbox.service --------------------+
 |  docker compose stack                                                  |
 |                                                                        |
 |   worker (ant beta:worker poll)      mcp-tunnel (Bun, :8787)           |
@@ -42,8 +42,8 @@ systemd's role is deliberately small. `host/systemd/claude-sandbox.service` brin
 | `compose.yaml` | The stack: worker, mcp-tunnel, profile-gated cloudflared |
 | `sandbox/` | Worker image (Dockerfile) and spawn-per-session script |
 | `mcp-tunnel/` | Bun and strict TypeScript MCP reverse proxy with pluggable publish transports |
-| `host/systemd/` | The one unit that supervises the stack on bb1 |
-| `scripts/deploy-bb1.sh` | Host-side installer, invoked by `just deploy` |
+| `host/systemd/` | The one unit that supervises the stack on the deploy host |
+| `scripts/deploy.sh` | Host-side installer, invoked by `just deploy` |
 | `examples/tunnel.jsonc` | Tunnel route configuration |
 | `backends/cloudflare/` | Alternative execution backend on Cloudflare Sandboxes (same contract, different runtime) |
 | `docs/` | Architecture notes and decision records |
@@ -107,21 +107,21 @@ Two clarifications from resolving the upstreams. OpenChamber is not a standalone
 
 A trust note, stated plainly: jcode (MIT, 1jehuang/jcode) and OpenChamber (MIT, openchamber/openchamber) are young community projects that have not been reviewed the way the Anthropic, sst, and GitHub tooling has, and this dev image is privileged for docker-in-docker. The jcode binary is checksum-pinned and every version bump is a deliberate edit, but running unreviewed agents in a privileged container is a real trade-off; keep them out of the base sandbox image (they are dev-stage only) and prefer the firewall-enabled workflow when exercising them.
 
-## Deployment to bb1
+## Deployment to a self-hosted server
 
-Remote recipes reference the `bb1` SSH host alias from your SSH config; the justfile carries no host, port, or user data. Deployment is a manual step:
+The remote workflow targets any Linux host reachable over SSH that runs systemd and Docker with the compose plugin. Recipes take the host as an argument, so any alias or `user@host` from your SSH config works and the justfile carries no host data. Deployment is a manual step:
 
 ```sh
-just deploy          # rsync stack to bb1, build images, install the unit
-just remote-up       # systemctl start claude-sandbox.service
-just remote-status
+just deploy host=my-server        # rsync stack, build images, install the unit
+just remote-up host=my-server     # systemctl start claude-sandbox.service
+just remote-status host=my-server
 ```
 
 The installer stages the stack in `/opt/claude-sandbox`, seeds `/opt/claude-sandbox/.env` from the example if absent, and installs the systemd unit. Fill in the environment key on the host before starting.
 
 ## Alternative backend: Cloudflare Sandboxes
 
-`backends/cloudflare/` implements the same execution contract on Cloudflare's Sandbox SDK (GA since April 2026): sessions become `Sandbox` Durable Object instances, the container image re-applies the same provisioning (ant CLI, Bun) on Cloudflare's base image, the same `ant beta:worker poll` can run inside a sandbox, and in-sandbox MCP servers are exposed through the SDK's native cloudflared tunnels instead of mcp-tunnel. The Worker typechecks today; everything requiring an authenticated wrangler (secrets, dev, deploy) is documented in `backends/cloudflare/README.md` as run-later steps, in the same spirit as the bb1 deploy.
+`backends/cloudflare/` implements the same execution contract on Cloudflare's Sandbox SDK (GA since April 2026): sessions become `Sandbox` Durable Object instances, the container image re-applies the same provisioning (ant CLI, Bun) on Cloudflare's base image, the same `ant beta:worker poll` can run inside a sandbox, and in-sandbox MCP servers are exposed through the SDK's native cloudflared tunnels instead of mcp-tunnel. The Worker typechecks today; everything requiring an authenticated wrangler (secrets, dev, deploy) is documented in `backends/cloudflare/README.md` as run-later steps, in the same spirit as the SSH deploy.
 
 ## Plugin marketplace
 
@@ -137,7 +137,7 @@ just publish         # gh repo create danielbodnar/systemd-claude-sandbox --priv
 
 ## Open decision: tunnel publish transport
 
-How `mcp-tunnel` becomes reachable from outside bb1 is proposed but not confirmed. Cloudflare Tunnel is the proposed default, with WireGuard and plain SSH forwarding as alternatives. The interfaces in `mcp-tunnel/src/transport/` are final and the cloudflared path is scaffolded behind a flag and a compose profile. See `docs/decisions/0001-tunnel-transport.md` and do not implement further until it is accepted.
+How `mcp-tunnel` becomes reachable from outside the deploy host is proposed but not confirmed. Cloudflare Tunnel is the proposed default, with WireGuard and plain SSH forwarding as alternatives. The interfaces in `mcp-tunnel/src/transport/` are final and the cloudflared path is scaffolded behind a flag and a compose profile. See `docs/decisions/0001-tunnel-transport.md` and do not implement further until it is accepted.
 
 ## Versions verified against
 

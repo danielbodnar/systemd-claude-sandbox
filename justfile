@@ -1,10 +1,8 @@
 # systemd-claude-sandbox workflow.
 # Requires: just, docker with the compose plugin, bun >= 1.3.
-# Remote recipes use the `bb1` SSH host alias from your SSH config; no host,
-# port, or user data is inlined here. Nothing connects until you run a
-# deploy or remote recipe yourself.
-
-remote := env_var_or_default("SANDBOX_REMOTE", "bb1")
+# Remote recipes take the target as an argument (any SSH host alias or
+# user@host from your SSH config); no host data is inlined here. Nothing
+# connects until you run a deploy or remote recipe yourself.
 
 default:
     @just --list
@@ -63,23 +61,24 @@ devcontainer-config:
 
 # --- deploy (run manually; connects over SSH) -------------------------------
 
-# Stage the stack on the remote and install it. Uses the `bb1` alias.
-deploy:
+# Stage the stack on any SSH-reachable Linux host and install it.
+# Example: just deploy host=my-server
+deploy host:
     rsync -az --exclude node_modules --exclude .attic --exclude .git --exclude .env \
-        ./ {{remote}}:/tmp/claude-sandbox-stage/stack/
-    ssh {{remote}} sudo bash /tmp/claude-sandbox-stage/stack/scripts/deploy-bb1.sh /tmp/claude-sandbox-stage
+        ./ {{host}}:/tmp/claude-sandbox-stage/stack/
+    ssh {{host}} sudo bash /tmp/claude-sandbox-stage/stack/scripts/deploy.sh /tmp/claude-sandbox-stage
 
-remote-up:
-    ssh {{remote}} sudo systemctl start claude-sandbox.service
+remote-up host:
+    ssh {{host}} sudo systemctl start claude-sandbox.service
 
-remote-down:
-    ssh {{remote}} sudo systemctl stop claude-sandbox.service
+remote-down host:
+    ssh {{host}} sudo systemctl stop claude-sandbox.service
 
-remote-status:
-    ssh {{remote}} "systemctl status claude-sandbox.service --no-pager; cd /opt/claude-sandbox && docker compose ps"
+remote-status host:
+    ssh {{host}} "systemctl status claude-sandbox.service --no-pager; cd /opt/claude-sandbox && docker compose ps"
 
-remote-logs:
-    ssh {{remote}} "cd /opt/claude-sandbox && docker compose logs -f --tail 100"
+remote-logs host:
+    ssh {{host}} "cd /opt/claude-sandbox && docker compose logs -f --tail 100"
 
 # --- cloudflare backend -----------------------------------------------------
 

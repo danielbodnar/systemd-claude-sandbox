@@ -20,7 +20,7 @@ just cf-install / cf-typecheck          # backends/cloudflare
 just cf-dev / cf-deploy                 # need an authenticated wrangler
 
 just devcontainer-config / -up / -shell # bunx @devcontainers/cli
-just deploy / remote-up / remote-status / remote-logs   # SSH to the `bb1` alias
+just deploy host=<alias> / remote-up host=<alias> / remote-status host=<alias>   # SSH deploy to any host
 ```
 
 Tests: the whole suite is one file, `mcp-tunnel/src/index.test.ts`. Run a single

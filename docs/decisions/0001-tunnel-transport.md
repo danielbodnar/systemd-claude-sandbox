@@ -1,20 +1,20 @@
 # ADR 0001: Publish transport for mcp-tunnel
 
-Status: Proposed. Awaiting confirmation from Daniel before implementation proceeds beyond the scaffolded cloudflared adapter.
+Status: Proposed. Awaiting maintainer confirmation before implementation proceeds beyond the scaffolded cloudflared adapter.
 
 ## Context
 
-`mcp-tunnel` listens on a loopback port on bb1 and must become reachable by remote MCP clients, primarily Claude Desktop and claude.ai connectors, which speak MCP Streamable HTTP to a public URL. Three transports are on the table.
+`mcp-tunnel` listens on a loopback port on the deploy host, a self-hosted Linux server reachable over SSH, and must become reachable by remote MCP clients, primarily Claude Desktop and claude.ai connectors, which speak MCP Streamable HTTP to a public URL. Three transports are on the table.
 
-**Cloudflare Tunnel.** A token-mode `cloudflared` makes an outbound connection to Cloudflare's edge and publishes the listener at a hostname under a zone Daniel controls. No inbound ports on bb1, TLS termination and DDoS posture handled at the edge, and Cloudflare Access can require authentication in front of the tunnel. This matches the existing platform preference and is the only option that gives claude.ai connectors a clean public HTTPS endpoint without exposing bb1. The costs are a dependency on Cloudflare's availability and the tunnel token as a new secret.
+**Cloudflare Tunnel.** A token-mode `cloudflared` makes an outbound connection to Cloudflare's edge and publishes the listener at a hostname under a DNS zone the operator controls. No inbound ports on the deploy host, TLS termination and DDoS posture handled at the edge, and Cloudflare Access can require authentication in front of the tunnel. This is the only option that gives claude.ai connectors a clean public HTTPS endpoint without exposing the host. The costs are a dependency on Cloudflare's availability, the need for a Cloudflare account and zone, and the tunnel token as a new secret.
 
-**WireGuard.** A point-to-point tunnel between bb1 and each client machine. Strongest network posture and no third party, but every client needs a WireGuard peer configuration, and claude.ai connectors cannot join a private network at all, so this only serves Claude Desktop from machines Daniel controls.
+**WireGuard.** A point-to-point tunnel between the deploy host and each client machine. Strongest network posture and no third party, but every client needs a WireGuard peer configuration, and claude.ai connectors cannot join a private network at all, so this only serves Claude Desktop from machines the operator controls.
 
-**SSH forwarding.** `ssh -N -L 8787:localhost:8787 bb1` and pointing Claude Desktop at localhost. Zero new infrastructure and it reuses the existing bb1 SSH access, but it is per-machine, manual, breaks on network changes, and likewise cannot serve claude.ai.
+**SSH forwarding.** `ssh -N -L 8787:localhost:8787 <host>` and pointing Claude Desktop at localhost. Zero new infrastructure and it reuses the SSH access the deploy workflow already requires, but it is per-machine, manual, breaks on network changes, and likewise cannot serve claude.ai.
 
 ## Decision
 
-Proposed, not accepted: default to Cloudflare Tunnel, keep the transport pluggable so WireGuard or SSH can be selected per deployment. The deciding constraint is claude.ai connector support, which requires a public HTTPS endpoint that only the Cloudflare option provides without opening inbound ports on bb1.
+Proposed, not accepted: default to Cloudflare Tunnel, keep the transport pluggable so WireGuard or SSH can be selected per deployment. The deciding constraint is claude.ai connector support, which requires a public HTTPS endpoint that only the Cloudflare option provides without opening inbound ports on the deploy host.
 
 ## Consequences
 
