@@ -71,6 +71,40 @@ RUN chmod +x /usr/local/bin/init-firewall.sh && \
     echo "${USERNAME} ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/dev-firewall && \
     chmod 0440 /etc/sudoers.d/dev-firewall
 
+# --- additional coding agents ----------------------------------------------
+# The dev image is a multi-agent environment, not Claude-specific. Each agent
+# is installed by its upstream-documented method and pinned. Auth for every
+# agent is a run-later step; see the README's coding agents section.
+
+# Node.js 22 (nodesource): required by @github/copilot and @openchamber/web,
+# neither of which runs on Bun alone. Debian trixie ships an older nodejs.
+ARG NODE_MAJOR=22
+RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# jcode (1jehuang/jcode, MIT): single Rust binary from a pinned GitHub
+# release, verified against the published SHA256SUMS. Trust note: jcode is a
+# young third-party project; the checksum pin means upgrades are deliberate.
+ARG JCODE_VERSION=0.64.2
+RUN cd /tmp && \
+    curl -fsSLO "https://github.com/1jehuang/jcode/releases/download/v${JCODE_VERSION}/jcode-linux-x86_64.tar.gz" && \
+    curl -fsSLO "https://github.com/1jehuang/jcode/releases/download/v${JCODE_VERSION}/SHA256SUMS" && \
+    grep "jcode-linux-x86_64.tar.gz" SHA256SUMS | sha256sum -c - && \
+    tar -xzf jcode-linux-x86_64.tar.gz -C /usr/local/bin jcode && \
+    rm -f jcode-linux-x86_64.tar.gz SHA256SUMS
+
+# opencode (sst/opencode) and GitHub Copilot CLI (@github/copilot), plus
+# OpenChamber (openchamber/openchamber), the web and desktop interface for
+# opencode. All three ship on npm; exact-version pins.
+ARG OPENCODE_VERSION=1.18.11
+ARG COPILOT_CLI_VERSION=1.0.77
+ARG OPENCHAMBER_VERSION=1.17.2
+RUN npm install -g --no-fund --no-audit \
+        "opencode-ai@${OPENCODE_VERSION}" \
+        "@github/copilot@${COPILOT_CLI_VERSION}" \
+        "@openchamber/web@${OPENCHAMBER_VERSION}"
+
 USER $USERNAME
 ENV SHELL=/bin/zsh
 ENV EDITOR=nano

@@ -85,6 +85,22 @@ just devcontainer-shell    # zsh inside the container
 
 VS Code and other devcontainer-aware editors pick up `.devcontainer/devcontainer.json` directly.
 
+### Coding agents in the dev image
+
+The dev stage is a multi-agent execution environment. Five agents are installed, each by its upstream-documented method, pinned in `sandbox/Dockerfile` build args, and all requiring account sign-in as a run-later step.
+
+| Agent | Entry point | Install source | Auth |
+|-------|-------------|----------------|------|
+| Claude Code | `claude` | Native installer (claude.ai/install.sh) | `claude` then `/login`, or `ANTHROPIC_API_KEY` |
+| jcode | `jcode` | Pinned GitHub release binary (v0.64.2), checksum-verified | Provider keys per jcode.sh/docs |
+| opencode | `opencode` | npm `opencode-ai@1.18.11` (sst/opencode) | `opencode auth login` (75+ providers) |
+| OpenChamber | `openchamber` | npm `@openchamber/web@1.17.2` | Wraps the local opencode install; web UI guarded by `--ui-password` |
+| Copilot CLI | `copilot` | npm `@github/copilot@1.0.77` | `/login` in the CLI, or `GH_TOKEN` |
+
+Two clarifications from resolving the upstreams. OpenChamber is not a standalone agent: it is the community desktop and web interface for opencode, so it is installed as opencode's companion and needs Node 22, which the dev stage provides via nodesource for it and the Copilot CLI. And the Copilot CLI here is the standalone `@github/copilot` npm package, not the older `gh` extension.
+
+A trust note, stated plainly: jcode (MIT, 1jehuang/jcode) and OpenChamber (MIT, openchamber/openchamber) are young community projects that have not been reviewed the way the Anthropic, sst, and GitHub tooling has, and this dev image is privileged for docker-in-docker. The jcode binary is checksum-pinned and every version bump is a deliberate edit, but running unreviewed agents in a privileged container is a real trade-off; keep them out of the base sandbox image (they are dev-stage only) and prefer the firewall-enabled workflow when exercising them.
+
 ## Deployment to bb1
 
 Remote recipes reference the `bb1` SSH host alias from your SSH config; the justfile carries no host, port, or user data. Deployment is a manual step:
