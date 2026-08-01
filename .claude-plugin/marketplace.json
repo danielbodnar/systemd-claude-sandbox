@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "systemd-claude-sandbox",
+  "description": "Plugins for the self-hosted Claude code-execution sandbox: sandbox operations, MCP tunnel management, and deploy workflows",
+  "owner": {
+    "name": "Daniel Bodnar",
+    "email": "1790726+danielbodnar@users.noreply.github.com",
+    "url": "https://github.com/danielbodnar"
+  },
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": []
+}

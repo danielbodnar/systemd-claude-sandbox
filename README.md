@@ -101,6 +101,10 @@ The installer stages the stack in `/opt/claude-sandbox`, seeds `/opt/claude-sand
 
 `backends/cloudflare/` implements the same execution contract on Cloudflare's Sandbox SDK (GA since April 2026): sessions become `Sandbox` Durable Object instances, the container image re-applies the same provisioning (ant CLI, Bun) on Cloudflare's base image, the same `ant beta:worker poll` can run inside a sandbox, and in-sandbox MCP servers are exposed through the SDK's native cloudflared tunnels instead of mcp-tunnel. The Worker typechecks today; everything requiring an authenticated wrangler (secrets, dev, deploy) is documented in `backends/cloudflare/README.md` as run-later steps, in the same spirit as the bb1 deploy.
 
+## Plugin marketplace
+
+The repository doubles as a Claude Code plugin marketplace. `.claude-plugin/marketplace.json` declares the `systemd-claude-sandbox` marketplace (currently empty; project plugins land under `plugins/`), and `.claude/settings.json` registers three upstream marketplaces at project scope through `extraKnownMarketplaces`: `claude-plugins-official` (anthropics/claude-plugins-official), `claude-code-plugins` (anthropics/claude-code), and `knowledge-work-plugins` (anthropics/knowledge-work-plugins). Anyone who trusts this project folder in Claude Code is prompted to install these sources automatically. The manifest is checked with `claude plugin validate .`; the only current warning is the intentionally empty plugin list.
+
 ## Publishing to GitHub
 
 The repository is created and pushed once with:
