@@ -87,11 +87,16 @@ them into the unit.
   and NET_RAW. It is confined to the `dev` profile so it never starts with the
   sandbox stack. Never copy that service shape to anything executing untrusted
   code.
-- **Version pins live in `sandbox/Dockerfile` ARGs** — `ANT_VERSION`,
-  `BUN_VERSION`, `NODE_MAJOR`, `GIT_DELTA_VERSION`, `JCODE_VERSION`,
-  `OPENCODE_VERSION`, `COPILOT_CLI_VERSION`, `OPENCHAMBER_VERSION`. Bumps are
-  deliberate edits; the jcode binary is verified against the release's published
-  `SHA256SUMS`.
+- **Version pins live in `sandbox/mise.toml` and `sandbox/mise.dev.toml`**, which
+  the image installs as mise's global config (`/etc/mise/config.toml` plus
+  `/etc/mise/conf.d/dev.toml`). Bumps are deliberate edits there, not in
+  Dockerfile ARGs. Three things stay outside mise on purpose, each for a musl
+  reason documented inline: Node and Python come from apk because mise would
+  compile them from source; `opencode-ai` and `@openchamber/web` come from
+  `npm install -g` because mise's npm backend does not run the postinstall
+  scripts they use to fetch their platform binary; and Claude Code comes from
+  its native installer for the same reason. `@github/copilot` is absent —
+  its prebuilt binary is glibc-linked and cannot run on musl.
 - **The repository name predates the runtime.** An earlier iteration built an
   mkosi/vmspawn VM image; compose replaced it and the naming survived. The
   stronger-isolation seam is the container runtime (gVisor, Kata, a VM-isolated

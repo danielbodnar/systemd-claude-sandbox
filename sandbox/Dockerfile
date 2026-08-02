@@ -74,17 +74,27 @@ RUN printf '#!/bin/sh\n# Alpine has no `aggregate`; see sandbox/Dockerfile. Dedu
     && chmod +x /usr/local/bin/aggregate
 
 COPY sandbox/mise.dev.toml /etc/mise/conf.d/dev.toml
-
-# mise's npm backend keeps packages in a content-addressed store under $HOME
-# and symlinks into the install directory, so installing as root would leave
-# every agent binary behind /root's 0700. Point HOME at the shared data dir
-# for the install, then make the whole tree world-readable. The store is load
-# bearing — it cannot be pruned afterwards the way a download cache can.
-RUN mkdir -p "${MISE_DATA_DIR}/home" \
-    && HOME="${MISE_DATA_DIR}/home" mise install \
-    && mise reshim \
-    && rm -rf /root/.cache/mise "${MISE_DATA_DIR}/home/.cache/mise" \
+RUN mise install && mise reshim && rm -rf /root/.cache/mise \
     && chmod -R a+rX "${MISE_DATA_DIR}"
+
+# --- additional coding agents ----------------------------------------------
+# The dev image is a multi-agent environment, not Claude-specific. Auth for
+# every agent is a run-later step; see the README's coding agents section.
+#
+# These stay on npm rather than in sandbox/mise.dev.toml because mise's npm
+# backend does not run postinstall scripts, and both packages resolve their
+# platform-native binary from one. npm also honours the `libc` field, so it
+# picks the musl build where the publisher ships it.
+#
+# @github/copilot is excluded on purpose: its prebuilt binary is dynamically
+# linked against glibc and dies on musl with `fcntl64: symbol not found`,
+# which gcompat cannot shim. It needs a glibc base image, not a flag.
+ARG OPENCODE_VERSION=1.18.11
+ARG OPENCHAMBER_VERSION=1.17.2
+RUN npm install -g --no-fund --no-audit \
+        "opencode-ai@${OPENCODE_VERSION}" \
+        "@openchamber/web@${OPENCHAMBER_VERSION}" \
+    && npm cache clean --force
 
 # Non-root user. The upstream devcontainer inherits the node user from its
 # base image; this lineage has none, so create one.
@@ -112,6 +122,14 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
     -a 'eval "$(fzf --zsh)"' \
     -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
     -x
+
+# Claude Code through the native installer. Its npm package resolves the real
+# binary from a postinstall script that mise's npm backend never runs, and the
+# native installer is the upstream-documented path for a Node-less lineage
+# anyway — it ships a musl build and needs neither node nor bun.
+ARG CLAUDE_CODE_VERSION=latest
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- "$CLAUDE_CODE_VERSION"
+ENV PATH="/home/dev/.local/bin:$PATH"
 
 ENTRYPOINT []
 CMD ["sleep", "infinity"]
