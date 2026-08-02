@@ -23,8 +23,8 @@ services:
     image: claude-sandbox-worker:latest
     entrypoint: ["ant", "beta:worker", "poll", "--workdir", "/workspace"]
     environment:
-      ANTHROPIC_ENVIRONMENT_KEY: ${ANTHROPIC_ENVIRONMENT_KEY:?set in .env}
-      ANTHROPIC_ENVIRONMENT_ID: ${ANTHROPIC_ENVIRONMENT_ID:?set in .env}
+      ANTHROPIC_ENVIRONMENT_KEY: ${ANTHROPIC_ENVIRONMENT_KEY:-}
+      ANTHROPIC_ENVIRONMENT_ID: ${ANTHROPIC_ENVIRONMENT_ID:-}
       ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
     volumes:
       - workspace:/workspace
