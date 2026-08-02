@@ -41,10 +41,7 @@ const matchRoute = (
   return undefined;
 };
 
-export const handleRequest = async (
-  config: Config,
-  request: Request,
-): Promise<Response> => {
+export const handleRequest = async (config: Config, request: Request): Promise<Response> => {
   const url = new URL(request.url);
 
   if (url.pathname === "/healthz") {

@@ -1,8 +1,8 @@
 {
   "name": "mcp-tunnel",
-  "module": "src/index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "src/index.ts",
   "scripts": {
     "start": "bun run src/index.ts",
     "typecheck": "tsc --noEmit",

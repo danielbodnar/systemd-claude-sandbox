@@ -38,7 +38,8 @@ One unit, `claude-sandbox.service`, brings the stack up at boot and restarts it 
 `sandbox/Dockerfile` has two stages. The `sandbox` stage is the execution contract and stays minimal. The `dev` stage layers the devcontainer tooling and five coding agents on top. The Cloudflare backend cannot literally share the base (Cloudflare requires extending its image) so it re-applies the same provisioning steps with the same pinned versions, which keeps runtime contents aligned across backends.
 
 <Aside type="note">
-  The devcontainer's `dev` service runs privileged for docker-in-docker. It sits behind a compose profile precisely so that privilege never leaks into the default stack.
+  The devcontainer's `dev` service runs privileged for docker-in-docker. It sits behind a compose
+  profile precisely so that privilege never leaks into the default stack.
 </Aside>
 
 ## Further reading

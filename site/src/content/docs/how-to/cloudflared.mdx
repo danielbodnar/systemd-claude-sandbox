@@ -8,7 +8,10 @@ import { Steps, Aside } from "@astrojs/starlight/components";
 By default the MCP tunnel listens on loopback only. This guide publishes it through Cloudflare Tunnel, the proposed default transport.
 
 <Aside type="caution">
-  The transport choice is a recorded decision that is proposed but not yet accepted; see [transports and the open decision](../../explanation/transports/). That is why cloudflared is double-gated: a compose profile guards the service, and the in-process adapter additionally requires a flag. Treat this guide as opting into the proposal.
+  The transport choice is a recorded decision that is proposed but not yet accepted; see [transports
+  and the open decision](../../explanation/transports/). That is why cloudflared is double-gated: a
+  compose profile guards the service, and the in-process adapter additionally requires a flag. Treat
+  this guide as opting into the proposal.
 </Aside>
 
 ## Prerequisites
