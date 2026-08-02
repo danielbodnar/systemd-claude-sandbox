@@ -66,6 +66,10 @@ export default {
       return json({ error: "unauthorized" }, 401);
     }
 
+    const headers = new Headers(request.headers);
+    headers.delete("Authorization");
+    request = new Request(request, { headers });
+
     // Preview URL requests must be proxied before any application routing.
     // The SDK copies request headers into the sandbox, so the gateway
     // credential is stripped before crossing that boundary; the clone keeps
