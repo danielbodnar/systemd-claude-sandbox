@@ -12,9 +12,21 @@
 # that stage.
 
 [tools]
-"github:dandavison/delta" = { version = "0.18.2", exe = "delta" }
-fzf = "0.74.2"
-gh = "2.97.0"
+#"github:dandavison/delta" = { version = "latest", exe = "delta" }
+fzf = "latest"
+gh = "latest"
+bun = "latest"
+
+ripgrep = "latest"
+jq = "latest"
+node = "latest"
+opencode = "latest"
+pi = "latest"
+npm = "latest"
+pnpm = "latest"
+docker-slim = "latest"
+docker-cli = "latest"
+delta = "latest"
 
 # jcode (1jehuang/jcode, MIT) — a young third-party project, left off by
 # default. The github backend verifies the release's published checksums, so
@@ -22,4 +34,4 @@ gh = "2.97.0"
 # "github:1jehuang/jcode" = { version = "0.64.2", exe = "jcode" }
 
 [settings]
-yes = true
+#yes = true

@@ -1,4 +1,24 @@
 [tools]
 bun = "latest"
 claude = "latest"
+jq = "latest"
 node = "latest"
+pi = "latest"
+opencode = "latest"
+pnpm = "latest"
+docker-slim = "latest"
+docker-cli = "latest"
+delta = "latest"
+npm = "latest"
+ripgrep = "latest"
+gh = "latest"
+fzf = "latest"
+uv = "latest"
+
+[settings]
+auto_install = true
+all_compile = true
+auto_env = true
+experimental = true
+env_shell_expand = true
+os = "alpine"

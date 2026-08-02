@@ -7,8 +7,8 @@ FROM oven/bun:1.3-slim
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY mcp-tunnel/package.json mcp-tunnel/
-RUN bun install --filter ./mcp-tunnel --production --frozen-lockfile
-
+#RUN bun install --filter ./mcp-tunnel --production --frozen-lockfile
+RUN bun install --filter ./mcp-tunnel --production
 COPY mcp-tunnel/src mcp-tunnel/src
 
 WORKDIR /app/mcp-tunnel
