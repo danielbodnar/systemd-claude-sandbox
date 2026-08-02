@@ -53,12 +53,14 @@ Click the button to fork the repository into your Cloudflare account and deploy 
 
 ## Start a session
 
+<Aside type="caution">
+  The session endpoints are unauthenticated by default. Restrict access (or add your own auth) and use a high-entropy session id.
+</Aside>
+
 Once deployed, start the Anthropic worker inside a sandbox by posting to the
 session endpoint:
 
-```bash
-curl -X POST https://claude-sandbox-cf.<your-subdomain>.workers.dev/sessions/my-session/ant
-```
+    curl -X POST "https://claude-sandbox-cf.<your-subdomain>.workers.dev/sessions/<random-session-id>/ant"
 
 MCP servers running inside the sandbox are reachable through the SDK's native
 cloudflared quick tunnel; see `sandbox.tunnels.get(port)` in the Worker source.
