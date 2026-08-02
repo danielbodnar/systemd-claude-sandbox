@@ -141,7 +141,9 @@ The installer stages the stack in `/opt/claude-sandbox`, seeds `/opt/claude-sand
 
 ## Alternative backend: Cloudflare Sandboxes
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/danielbodnar/systemd-claude-sandbox)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Fdanielbodnar%2Fsystemd-claude-sandbox%2Ftree%2Fmain%2Fbackends%2Fcloudflare)
+
+The button deploys your own instance of the backend to your own Cloudflare account: it clones the repository to your GitHub or GitLab account, prompts for the two Anthropic secrets plus a `SANDBOX_API_TOKEN` that gates every API route except the `/healthz` health check, and deploys the Worker through Workers Builds. See [`backends/cloudflare/README.md`](backends/cloudflare/README.md) for what it provisions and the manual alternative.
 
 `backends/cloudflare/` implements the same execution contract on Cloudflare's Sandbox SDK (GA since April 2026): sessions become `Sandbox` Durable Object instances, the container image re-applies the same provisioning (ant CLI, Bun) on Cloudflare's base image, the same `ant beta:worker poll` can run inside a sandbox, and in-sandbox MCP servers are exposed through the SDK's native cloudflared tunnels instead of mcp-tunnel. The Worker typechecks today; everything requiring an authenticated wrangler (secrets, dev, deploy) is documented in `backends/cloudflare/README.md` as run-later steps, in the same spirit as the SSH deploy.
 

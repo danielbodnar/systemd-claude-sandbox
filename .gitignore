@@ -6,6 +6,7 @@ node_modules/
 
 # secrets and local state
 .env
+.dev.vars
 *.log
 .claude/settings.local.json
 
