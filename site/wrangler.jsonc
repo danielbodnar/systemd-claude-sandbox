@@ -1,0 +1,9 @@
+{
+  // Workers Builds deploys the docs site as a static-assets Worker with
+  // this directory as the build root. Production runs `wrangler deploy`;
+  // branch builds run `wrangler versions upload`, which has no
+  // auto-configuration fallback and requires this file to exist.
+  "name": "systemd-claude-sandbox",
+  "compatibility_date": "2026-08-01",
+  "assets": { "directory": "./dist" }
+}
