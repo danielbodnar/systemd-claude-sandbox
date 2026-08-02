@@ -49,7 +49,9 @@ This guide installs the stack under `/opt/claude-sandbox` on a remote server and
 </Steps>
 
 <Aside type="note">
-  Container resource limits live in `compose.yaml`, not in the systemd unit. Containers run under the container engine's cgroup tree, so limits on the unit would only bound the compose client process. The unit's honest jobs are boot ordering and restart policy.
+  Container resource limits live in `compose.yaml`, not in the systemd unit. Containers run under
+  the container engine's cgroup tree, so limits on the unit would only bound the compose client
+  process. The unit's honest jobs are boot ordering and restart policy.
 </Aside>
 
 ## Roll back or remove

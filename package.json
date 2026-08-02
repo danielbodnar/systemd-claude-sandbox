@@ -1,8 +1,12 @@
 {
   "name": "systemd-claude-sandbox",
   "private": true,
+  "workspaces": [
+    "mcp-tunnel",
+    "site",
+    "backends/cloudflare"
+  ],
   "type": "module",
-  "workspaces": ["mcp-tunnel", "site", "backends/cloudflare"],
   "scripts": {
     "build": "bun run typecheck && bun run test && bun run docs:build",
     "dev": "just tunnel-dev",

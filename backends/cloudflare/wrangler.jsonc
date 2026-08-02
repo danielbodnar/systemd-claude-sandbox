@@ -12,13 +12,13 @@
       "class_name": "Sandbox",
       "image": "./Dockerfile",
       "instance_type": "lite",
-      "max_instances": 1
-    }
+      "max_instances": 1,
+    },
   ],
   "durable_objects": {
-    "bindings": [{ "class_name": "Sandbox", "name": "Sandbox" }]
+    "bindings": [{ "class_name": "Sandbox", "name": "Sandbox" }],
   },
-  "migrations": [{ "new_sqlite_classes": ["Sandbox"], "tag": "v1" }]
+  "migrations": [{ "new_sqlite_classes": ["Sandbox"], "tag": "v1" }],
 
   // Run-later: the Anthropic environment key must be a Worker secret, never
   // a plaintext var:

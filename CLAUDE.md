@@ -40,7 +40,7 @@ non-obvious one being the `npm install -g` line in the `dev` stage of
 **The contract is a pull-based work queue, not a server.** Anthropic's control
 plane holds the queue; nothing here accepts inbound connections from Anthropic.
 `ant beta:worker poll` claims sessions using `ANTHROPIC_ENVIRONMENT_KEY`. That
-key is the *only* credential that belongs on the worker host — an
+key is the _only_ credential that belongs on the worker host — an
 `ANTHROPIC_API_KEY` is organization-scoped and agent tool calls can read the
 worker's environment. Do not add one to `.env`, `compose.yaml`, or the
 Cloudflare worker's vars.

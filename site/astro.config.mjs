@@ -25,8 +25,7 @@ export default defineConfig({
         },
       ],
       editLink: {
-        baseUrl:
-          "https://github.com/danielbodnar/systemd-claude-sandbox/edit/main/site/",
+        baseUrl: "https://github.com/danielbodnar/systemd-claude-sandbox/edit/main/site/",
       },
       sidebar: [
         {
