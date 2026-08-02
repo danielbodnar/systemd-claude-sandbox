@@ -29,21 +29,22 @@ Cloudflare Sandboxes require a Workers Paid plan with Containers enabled. Click 
    ```bash
    cd backends/cloudflare
    bun install
-   wrangler login
+   bunx wrangler login
    ```
 
-2. Add the Anthropic environment credentials as Worker secrets. These must be
-   secrets, not plaintext vars — agent tool calls can read the worker environment.
+2. Add the required Worker secrets. These must be secrets, not plaintext vars —
+   agent tool calls can read the worker environment.
 
    ```bash
-   wrangler secret put ANTHROPIC_ENVIRONMENT_KEY
-   wrangler secret put ANTHROPIC_ENVIRONMENT_ID
+   bunx wrangler secret put ANTHROPIC_ENVIRONMENT_KEY
+   bunx wrangler secret put ANTHROPIC_ENVIRONMENT_ID
+   bunx wrangler secret put SANDBOX_API_TOKEN
    ```
 
 3. Deploy.
 
    ```bash
-   wrangler deploy
+   bunx wrangler deploy
    ```
 
    The `wrangler.jsonc` `instance_type` defaults to `lite`. Raise it to a larger
@@ -53,14 +54,17 @@ Cloudflare Sandboxes require a Workers Paid plan with Containers enabled. Click 
 
 ## Start a session
 
-<Aside type="caution">
-  The session endpoints are unauthenticated by default. Restrict access (or add your own auth) and use a high-entropy session id.
+<Aside type="note">
+  Every route except `/healthz` requires an `Authorization: ****** header. The Worker returns 503 when the secret is not configured and 401 when the header is missing or wrong.
 </Aside>
 
 Once deployed, start the Anthropic worker inside a sandbox by posting to the
 session endpoint:
 
-    curl -X POST "https://claude-sandbox-cf.<your-subdomain>.workers.dev/sessions/<random-session-id>/ant"
+```bash
+curl -X POST "https://claude-sandbox-cf.<your-subdomain>.workers.dev/sessions/<random-session-id>/ant" \
+  -H "Authorization: ******"
+```
 
 MCP servers running inside the sandbox are reachable through the SDK's native
 cloudflared quick tunnel; see `sandbox.tunnels.get(port)` in the Worker source.
