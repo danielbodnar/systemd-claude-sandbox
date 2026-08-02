@@ -5,3 +5,7 @@
 # environment key belongs here, never an organization API key.
 ANTHROPIC_ENVIRONMENT_KEY=""
 ANTHROPIC_ENVIRONMENT_ID=""
+
+# Bearer token gating every Worker route except /healthz. The Worker fails
+# closed without it. Generate one with: openssl rand -hex 32
+SANDBOX_API_TOKEN=""
