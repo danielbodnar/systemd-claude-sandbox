@@ -82,7 +82,7 @@ have git || die "git is required; install it and re-run"
 # StrictHostKeyChecking override, so probing never writes to known_hosts.
 ssh_to_github_works() {
         have ssh || return 1
-        ssh -o BatchMode=yes -o ConnectTimeout=5 -T git@github.com 2>&1 |
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -T git@github.com 2>&1 |
                 grep -q 'successfully authenticated'
 }
 
