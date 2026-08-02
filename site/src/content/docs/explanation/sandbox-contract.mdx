@@ -28,5 +28,7 @@ The compose `worker` service is the always-on poller: one filesystem shared acro
 `backends/cloudflare/` maps the contract onto Cloudflare Sandboxes: a session becomes a `Sandbox` Durable Object instance, the image re-applies the same `ant` and Bun provisioning on Cloudflare's base, and the same poller can run inside the sandbox. What changes is who runs the container and how services inside it are exposed. The backend README carries the full mapping table.
 
 <Aside type="note">
-  MCP servers that only the agent needs are best wrapped by the worker as custom tools, which requires no inbound connectivity anywhere. The tunnel exists for the other case: humans pointing Claude Desktop or claude.ai at servers inside the sandbox network.
+  MCP servers that only the agent needs are best wrapped by the worker as custom tools, which
+  requires no inbound connectivity anywhere. The tunnel exists for the other case: humans pointing
+  Claude Desktop or claude.ai at servers inside the sandbox network.
 </Aside>

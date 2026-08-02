@@ -7,63 +7,63 @@ Run `just` with no arguments to list recipes. Recipes that connect over SSH take
 
 ## Local stack
 
-| Recipe | Does | Requires |
-|--------|------|----------|
-| `just build` | Builds the worker and mcp-tunnel images | docker compose |
-| `just up [args]` | Starts the stack detached | docker compose |
+| Recipe                | Does                                                         | Requires                            |
+| --------------------- | ------------------------------------------------------------ | ----------------------------------- |
+| `just build`          | Builds the worker and mcp-tunnel images                      | docker compose                      |
+| `just up [args]`      | Starts the stack detached                                    | docker compose                      |
 | `just up-cloudflared` | Starts the stack including the cloudflared publisher profile | `CLOUDFLARE_TUNNEL_TOKEN` in `.env` |
-| `just down` | Stops the stack | docker compose |
-| `just ps` | Shows service status | docker compose |
-| `just logs [args]` | Follows logs, optionally for one service | docker compose |
+| `just down`           | Stops the stack                                              | docker compose                      |
+| `just ps`             | Shows service status                                         | docker compose                      |
+| `just logs [args]`    | Follows logs, optionally for one service                     | docker compose                      |
 
 ## mcp-tunnel development
 
-| Recipe | Does |
-|--------|------|
-| `just install` | `bun install` in `mcp-tunnel/` |
-| `just typecheck` | `tsc --noEmit` under strict settings |
-| `just test` | `bun test` |
+| Recipe                     | Does                                                                   |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `just install`             | `bun install` in `mcp-tunnel/`                                         |
+| `just typecheck`           | `tsc --noEmit` under strict settings                                   |
+| `just test`                | `bun test`                                                             |
 | `just tunnel-dev [config]` | Runs the tunnel against a config file, default `examples/tunnel.jsonc` |
 
 ## Devcontainer
 
-| Recipe | Does |
-|--------|------|
-| `just devcontainer-up` | Builds and starts the devcontainer via `bunx @devcontainers/cli` |
-| `just devcontainer-shell` | Opens zsh inside the running devcontainer |
-| `just devcontainer-config` | Prints the resolved devcontainer configuration |
+| Recipe                     | Does                                                             |
+| -------------------------- | ---------------------------------------------------------------- |
+| `just devcontainer-up`     | Builds and starts the devcontainer via `bunx @devcontainers/cli` |
+| `just devcontainer-shell`  | Opens zsh inside the running devcontainer                        |
+| `just devcontainer-config` | Prints the resolved devcontainer configuration                   |
 
 ## Remote deployment
 
 All remote recipes take `host=` with any SSH alias or `user@host`.
 
-| Recipe | Does |
-|--------|------|
-| `just deploy host=H` | Rsyncs the stack to the host and runs the installer |
-| `just remote-up host=H` | Starts `claude-sandbox.service` |
-| `just remote-down host=H` | Stops the service |
-| `just remote-status host=H` | Unit status plus `docker compose ps` |
-| `just remote-logs host=H` | Follows compose logs on the host |
+| Recipe                      | Does                                                |
+| --------------------------- | --------------------------------------------------- |
+| `just deploy host=H`        | Rsyncs the stack to the host and runs the installer |
+| `just remote-up host=H`     | Starts `claude-sandbox.service`                     |
+| `just remote-down host=H`   | Stops the service                                   |
+| `just remote-status host=H` | Unit status plus `docker compose ps`                |
+| `just remote-logs host=H`   | Follows compose logs on the host                    |
 
 ## Cloudflare backend
 
-| Recipe | Does | Requires |
-|--------|------|----------|
-| `just cf-install` | Installs backend dependencies | bun |
-| `just cf-typecheck` | Typechecks the Worker | bun |
-| `just cf-dev` | `wrangler dev` | authenticated wrangler, local Docker |
-| `just cf-deploy` | `wrangler deploy` | authenticated wrangler |
+| Recipe              | Does                          | Requires                             |
+| ------------------- | ----------------------------- | ------------------------------------ |
+| `just cf-install`   | Installs backend dependencies | bun                                  |
+| `just cf-typecheck` | Typechecks the Worker         | bun                                  |
+| `just cf-dev`       | `wrangler dev`                | authenticated wrangler, local Docker |
+| `just cf-deploy`    | `wrangler deploy`             | authenticated wrangler               |
 
 ## Documentation
 
-| Recipe | Does |
-|--------|------|
-| `just docs-dev` | Starlight dev server for the site |
-| `just docs-build` | Production build with link validation |
-| `just tapes` | Renders every VHS tape in `.tapes/` to GIFs |
+| Recipe            | Does                                        |
+| ----------------- | ------------------------------------------- |
+| `just docs-dev`   | Starlight dev server for the site           |
+| `just docs-build` | Production build with link validation       |
+| `just tapes`      | Renders every VHS tape in `.tapes/` to GIFs |
 
 ## Repository
 
-| Recipe | Does |
-|--------|------|
+| Recipe         | Does                                                       |
+| -------------- | ---------------------------------------------------------- |
 | `just publish` | Creates the GitHub repository if missing and pushes `main` |

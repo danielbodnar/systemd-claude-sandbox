@@ -18,10 +18,10 @@ export const startCloudflared: StartTransport = async ({ config }) => {
     throw new Error(`missing tunnel token in $${settings.tokenEnv}`);
   }
 
-  const child = Bun.spawn(
-    [settings.binary, "tunnel", "--no-autoupdate", "run", "--token", token],
-    { stdout: "inherit", stderr: "inherit" },
-  );
+  const child = Bun.spawn([settings.binary, "tunnel", "--no-autoupdate", "run", "--token", token], {
+    stdout: "inherit",
+    stderr: "inherit",
+  });
 
   return {
     kind: "cloudflared",

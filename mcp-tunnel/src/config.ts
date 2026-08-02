@@ -17,12 +17,7 @@ export const routeSchema = z.object({
   upstream: z.url(),
 });
 
-export const transportKindSchema = z.enum([
-  "none",
-  "cloudflared",
-  "wireguard",
-  "ssh",
-]);
+export const transportKindSchema = z.enum(["none", "cloudflared", "wireguard", "ssh"]);
 
 export const configSchema = z.object({
   listen: z

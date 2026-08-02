@@ -27,12 +27,12 @@ Token-mode `cloudflared` publisher for the tunnel. Gated behind its profile pend
 
 ## Networks and volumes
 
-| Name | Kind | Purpose |
-|------|------|---------|
-| `sandbox` | network | Shared by all services; the tunnel reaches MCP servers by service name |
-| `workspace` | volume | Session working directory, `/workspace` in the worker |
-| `claude-code-config` | volume | Claude Code state for the dev container |
-| `command-history` | volume | Shell history for the dev container |
+| Name                 | Kind    | Purpose                                                                |
+| -------------------- | ------- | ---------------------------------------------------------------------- |
+| `sandbox`            | network | Shared by all services; the tunnel reaches MCP servers by service name |
+| `workspace`          | volume  | Session working directory, `/workspace` in the worker                  |
+| `claude-code-config` | volume  | Claude Code state for the dev container                                |
+| `command-history`    | volume  | Shell history for the dev container                                    |
 
 ## Profiles
 

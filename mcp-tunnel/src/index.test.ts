@@ -35,10 +35,7 @@ describe("proxy", () => {
   });
 
   test("healthz reports routes", async () => {
-    const response = await handleRequest(
-      config,
-      new Request("http://localhost/healthz"),
-    );
+    const response = await handleRequest(config, new Request("http://localhost/healthz"));
     const body = (await response.json()) as { ok: boolean; routes: string[] };
     expect(body.ok).toBe(true);
     expect(body.routes).toEqual(["echo"]);
@@ -63,9 +60,7 @@ describe("proxy", () => {
         }),
     });
     const forwarded = configSchema.parse({
-      routes: [
-        { name: "echo", upstream: `http://127.0.0.1:${upstream.port}/mcp` },
-      ],
+      routes: [{ name: "echo", upstream: `http://127.0.0.1:${upstream.port}/mcp` }],
     });
     const response = await handleRequest(
       forwarded,

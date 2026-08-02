@@ -1,8 +1,4 @@
-import {
-  getSandbox,
-  proxyToSandbox,
-  type Sandbox as SandboxClass,
-} from "@cloudflare/sandbox";
+import { getSandbox, proxyToSandbox, type Sandbox as SandboxClass } from "@cloudflare/sandbox";
 
 // Required: the Worker must re-export the Sandbox Durable Object class.
 export { Sandbox } from "@cloudflare/sandbox";
@@ -32,8 +28,7 @@ type Env = {
   ANTHROPIC_ENVIRONMENT_ID?: string;
 };
 
-const json = (data: unknown, status = 200): Response =>
-  Response.json(data, { status });
+const json = (data: unknown, status = 200): Response => Response.json(data, { status });
 
 const sessionPattern = /^\/sessions\/([a-zA-Z0-9_-]+)(\/[a-z]+)?$/;
 
@@ -70,15 +65,12 @@ export default {
         if (!env.ANTHROPIC_ENVIRONMENT_KEY || !env.ANTHROPIC_ENVIRONMENT_ID) {
           return json({ error: "environment secrets not configured" }, 503);
         }
-        const process = await sandbox.startProcess(
-          "ant beta:worker poll --workdir /workspace",
-          {
-            env: {
-              ANTHROPIC_ENVIRONMENT_KEY: env.ANTHROPIC_ENVIRONMENT_KEY,
-              ANTHROPIC_ENVIRONMENT_ID: env.ANTHROPIC_ENVIRONMENT_ID,
-            },
+        const process = await sandbox.startProcess("ant beta:worker poll --workdir /workspace", {
+          env: {
+            ANTHROPIC_ENVIRONMENT_KEY: env.ANTHROPIC_ENVIRONMENT_KEY,
+            ANTHROPIC_ENVIRONMENT_ID: env.ANTHROPIC_ENVIRONMENT_ID,
           },
-        );
+        });
         return json({ started: process.id });
       }
       case "/files": {
