@@ -67,7 +67,12 @@ export default {
     }
 
     // Preview URL requests must be proxied before any application routing.
-    const proxied = await proxyToSandbox(request, env);
+    // The SDK copies request headers into the sandbox, so the gateway
+    // credential is stripped before crossing that boundary; the clone keeps
+    // the original body readable for the application routes below.
+    const forwarded = new Request(request.clone());
+    forwarded.headers.delete("Authorization");
+    const proxied = await proxyToSandbox(forwarded, env);
     if (proxied) return proxied;
 
     const match = sessionPattern.exec(url.pathname);
