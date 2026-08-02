@@ -10,14 +10,14 @@ An alternative execution backend for the Claude self-hosted sandbox: the same co
 
 ## Contract mapping
 
-| Concern | Local compose backend | Cloudflare backend |
-|---------|----------------------|--------------------|
-| Session isolation | `docker run --rm` per work item (`sandbox/spawn.sh`) | One `Sandbox` Durable Object instance per session id |
-| Image | `sandbox/Dockerfile` (Debian base) | `Dockerfile` here, extending `docker.io/cloudflare/sandbox` |
-| Anthropic worker | compose `worker` service runs `ant beta:worker poll` | `POST /sessions/:id/ant` starts the same poller inside the sandbox |
-| MCP exposure | `mcp-tunnel` plus a publish transport | `sandbox.tunnels.get(port)` (cloudflared quick tunnel) or `exposePort()` preview URLs |
-| Egress control | vendored `init-firewall.sh`, compose network | SDK outbound handlers (`setOutboundHandler`) |
-| Supervision | systemd unit on the deploy host | Cloudflare's control plane |
+| Concern           | Local compose backend                                | Cloudflare backend                                                                    |
+| ----------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Session isolation | `docker run --rm` per work item (`sandbox/spawn.sh`) | One `Sandbox` Durable Object instance per session id                                  |
+| Image             | `sandbox/Dockerfile` (Debian base)                   | `Dockerfile` here, extending `docker.io/cloudflare/sandbox`                           |
+| Anthropic worker  | compose `worker` service runs `ant beta:worker poll` | `POST /sessions/:id/ant` starts the same poller inside the sandbox                    |
+| MCP exposure      | `mcp-tunnel` plus a publish transport                | `sandbox.tunnels.get(port)` (cloudflared quick tunnel) or `exposePort()` preview URLs |
+| Egress control    | vendored `init-firewall.sh`, compose network         | SDK outbound handlers (`setOutboundHandler`)                                          |
+| Supervision       | systemd unit on the deploy host                      | Cloudflare's control plane                                                            |
 
 Cloudflare requires containers to extend its base image, so this backend cannot share the Debian base image literally. The Dockerfile instead re-applies the identical provisioning steps (same `ant` and Bun versions, same install commands) on top of `cloudflare/sandbox`, which keeps the runtime contents aligned. Version bumps should touch both Dockerfiles together.
 

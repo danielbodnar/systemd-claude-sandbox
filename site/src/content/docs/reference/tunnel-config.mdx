@@ -12,15 +12,15 @@ The tunnel reads one JSONC file, given with `--config` and defaulting to `/etc/m
   "listen": { "hostname": "0.0.0.0", "port": 8787 },
   "routes": [
     { "name": "filesystem", "upstream": "http://mcp-filesystem:9101/mcp" },
-    { "name": "search", "upstream": "http://mcp-search:9102/mcp" }
+    { "name": "search", "upstream": "http://mcp-search:9102/mcp" },
   ],
   "transport": {
     "kind": "cloudflared",
     "cloudflared": {
       "binary": "cloudflared",
-      "tokenEnv": "CLOUDFLARE_TUNNEL_TOKEN"
-    }
-  }
+      "tokenEnv": "CLOUDFLARE_TUNNEL_TOKEN",
+    },
+  },
 }
 ```
 
@@ -28,33 +28,33 @@ The tunnel reads one JSONC file, given with `--config` and defaulting to `/etc/m
 
 ### listen
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `hostname` | string | `0.0.0.0` | Bind address inside the container. The host-side exposure stays loopback via the compose port mapping. |
-| `port` | integer 1 to 65535 | `8787` | Listener port. |
+| Field      | Type               | Default   | Description                                                                                            |
+| ---------- | ------------------ | --------- | ------------------------------------------------------------------------------------------------------ |
+| `hostname` | string             | `0.0.0.0` | Bind address inside the container. The host-side exposure stays loopback via the compose port mapping. |
+| `port`     | integer 1 to 65535 | `8787`    | Listener port.                                                                                         |
 
 ### routes
 
 An array with at least one entry. Each route maps a public path prefix to an upstream MCP endpoint.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string, `^[a-z0-9][a-z0-9-]*$` | Path segment under `/mcp/`. A route named `filesystem` serves `/mcp/filesystem`. |
-| `upstream` | URL | Full MCP endpoint inside the sandbox network. The upstream must speak MCP Streamable HTTP; both the 2026-07-28 and 2025-11-25 protocol revisions pass through unchanged. |
+| Field      | Type                           | Description                                                                                                                                                              |
+| ---------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`     | string, `^[a-z0-9][a-z0-9-]*$` | Path segment under `/mcp/`. A route named `filesystem` serves `/mcp/filesystem`.                                                                                         |
+| `upstream` | URL                            | Full MCP endpoint inside the sandbox network. The upstream must speak MCP Streamable HTTP; both the 2026-07-28 and 2025-11-25 protocol revisions pass through unchanged. |
 
 ### transport
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `kind` | `none` \| `cloudflared` \| `wireguard` \| `ssh` | `none` | Publish transport. `none` keeps the listener local. |
-| `cloudflared.binary` | string | `cloudflared` | Binary to spawn for the in-process adapter. |
-| `cloudflared.tokenEnv` | string | `CLOUDFLARE_TUNNEL_TOKEN` | Environment variable holding the tunnel token. |
+| Field                  | Type                                            | Default                   | Description                                         |
+| ---------------------- | ----------------------------------------------- | ------------------------- | --------------------------------------------------- |
+| `kind`                 | `none` \| `cloudflared` \| `wireguard` \| `ssh` | `none`                    | Publish transport. `none` keeps the listener local. |
+| `cloudflared.binary`   | string                                          | `cloudflared`             | Binary to spawn for the in-process adapter.         |
+| `cloudflared.tokenEnv` | string                                          | `CLOUDFLARE_TUNNEL_TOKEN` | Environment variable holding the tunnel token.      |
 
 Selecting `cloudflared` additionally requires the `--enable-cloudflared` flag until the transport decision is accepted; `wireguard` and `ssh` are intentional stubs that fail with a pointer to the decision record.
 
 ## Endpoints the tunnel itself serves
 
-| Path | Method | Response |
-|------|--------|----------|
-| `/healthz` | GET | `{"ok":true,"routes":[...]}` |
-| `/mcp/NAME` | any | Proxied to the route's upstream, streaming both ways |
+| Path        | Method | Response                                             |
+| ----------- | ------ | ---------------------------------------------------- |
+| `/healthz`  | GET    | `{"ok":true,"routes":[...]}`                         |
+| `/mcp/NAME` | any    | Proxied to the route's upstream, streaming both ways |

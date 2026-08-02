@@ -20,6 +20,4 @@ export type TransportOptions = {
   readonly config: Config;
 };
 
-export type StartTransport = (
-  options: TransportOptions,
-) => Promise<TransportHandle>;
+export type StartTransport = (options: TransportOptions) => Promise<TransportHandle>;
