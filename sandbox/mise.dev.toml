@@ -1,0 +1,28 @@
+# Toolchain manifest for the `dev` stage of sandbox/Dockerfile.
+#
+# Layered on top of sandbox/mise.toml by dropping it into /etc/mise/conf.d/,
+# which mise merges with the global config. Tools pinned here are additive; the
+# sandbox-stage pins stay in one place.
+#
+# The npm-distributed coding agents need a real Node runtime, which the dev
+# stage installs from apk. mise cannot supply Node on musl — it has no prebuilt
+# and falls back to compiling from source — so Node's version is Alpine's to
+# choose and everything downstream of it is pinned here instead.
+
+[tools]
+"github:dandavison/delta" = { version = "0.18.2", exe = "delta" }
+fzf = "0.74.2"
+gh = "2.97.0"
+
+# --- coding agents ---------------------------------------------------------
+# The dev image is a multi-agent environment, not Claude-specific. Auth for
+# every agent is a run-later step; see the README's coding agents section.
+"npm:@anthropic-ai/claude-code" = "latest"
+"npm:opencode-ai" = "1.18.11"
+"npm:@github/copilot" = "1.0.77"
+"npm:@openchamber/web" = "1.17.2"
+
+# jcode (1jehuang/jcode, MIT) — a young third-party project, left off by
+# default. The github backend verifies the release's published checksums, so
+# enabling it is a deliberate, pinned edit:
+# "github:1jehuang/jcode" = { version = "0.64.2", exe = "jcode" }
