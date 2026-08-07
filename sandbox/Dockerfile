@@ -1,4 +1,4 @@
-# One image lineage, two stages.
+# One image lineage, two stages, one toolchain manager.
 #
 # sandbox: the worker image following the self-hosted sandbox integration
 #   guide (platform.claude.com/docs/en/managed-agents/self-hosted-sandboxes).
@@ -10,26 +10,39 @@
 # dev: a thin devcontainer stage on top of sandbox for working on this repo
 #   with Claude Code, adapted from anthropics/claude-code/.devcontainer.
 #   Both services build from this file with the repo root as context.
+#
+# Version pins live in sandbox/mise.toml and sandbox/mise.dev.toml, not in
+# ARGs here. apk owns the OS layer (musl, bash, git, python, node); mise owns
+# the pinned developer toolchain. That line is drawn where it is because mise
+# has no musl prebuilds for python or node and would compile them from source.
 
-FROM debian:trixie-slim AS sandbox
+FROM alpine:3.22 AS sandbox
 
-ARG ANT_VERSION=1.21.0
-ARG BUN_VERSION=1.3.14
-ARG TARGETARCH
+ARG MISE_VERSION=v2026.8.0
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        bash ca-certificates curl git python3 ripgrep jq unzip tar xz-utils \
-    && rm -rf /var/lib/apt/lists/*
+# mise resolves its config globally so shims work for every user and every
+# shell, including non-login exec into the container. Data lives outside
+# /root so the dev stage's unprivileged user can read the same installs.
+# MISE_CACHE_DIR is deliberately left at its default ($HOME/.cache/mise):
+# shims write to it on every invocation, so it has to be per-user writable.
+ENV MISE_DATA_DIR=/usr/local/share/mise \
+    MISE_CONFIG_DIR=/etc/mise \
+    MISE_GLOBAL_CONFIG_FILE=/etc/mise/config.toml \
+    MISE_YES=1 \
+    PATH=/usr/local/share/mise/shims:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
-# The ant CLI is the worker runtime.
-RUN ARCH=$([ "$TARGETARCH" = "arm64" ] && echo arm64 || echo amd64) && \
-    curl -fsSL "https://github.com/anthropics/anthropic-cli/releases/download/v${ANT_VERSION}/ant_${ANT_VERSION}_linux_${ARCH}.tar.gz" \
-      | tar -xz -C /usr/local/bin ant
+# gcompat, libstdc++ and libgcc are the price of Alpine: several of the
+# pinned binaries (bun among them) are built against glibc.
+RUN apk add --no-cache \
+        bash ca-certificates curl git python3 tar xz unzip \
+        gcompat libstdc++ libgcc \
+    && ln -sf python3 /usr/bin/python
 
-# Bun for JS and TS execution inside sessions and for bunx-launched MCP servers.
-RUN curl -fsSL https://bun.com/install | BUN_INSTALL=/usr/local/bun bash -s -- "bun-v${BUN_VERSION}" \
-    && ln -s /usr/local/bun/bin/bun /usr/local/bin/bun \
-    && ln -s /usr/local/bun/bin/bunx /usr/local/bin/bunx
+RUN curl -fsSL https://mise.run | MISE_VERSION="${MISE_VERSION}" MISE_INSTALL_PATH=/usr/local/bin/mise sh \
+    && mise --version
+
+COPY sandbox/mise.toml /etc/mise/config.toml
+RUN mise install && mise reshim && rm -rf /root/.cache/mise
 
 WORKDIR /workspace
 VOLUME /workspace
@@ -45,22 +58,48 @@ ENV TZ="$TZ"
 ENV DEVCONTAINER=true
 
 # Tooling from the upstream Claude Code devcontainer, plus the firewall
-# dependencies its init script needs (iptables, ipset, aggregate, dig).
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        less procps sudo fzf zsh man-db gnupg2 gh wget \
-        iptables ipset iproute2 dnsutils aggregate nano vim openssh-client \
-    && rm -rf /var/lib/apt/lists/*
+# dependencies its init script needs (iptables, ipset, dig). nodejs and npm
+# are the runtime for the npm-backed agents in sandbox/mise.dev.toml.
+RUN apk add --no-cache \
+        less procps sudo zsh man-db gnupg wget tzdata shadow \
+        iptables ipset iproute2 bind-tools nano vim openssh-client \
+        nodejs npm
 
-ARG GIT_DELTA_VERSION=0.18.2
-RUN ARCH=$(dpkg --print-architecture) && \
-    wget -q "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
-    dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
-    rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
+# The upstream firewall script pipes GitHub's CIDR list through `aggregate`,
+# which Alpine does not package. Aggregation only collapses overlapping
+# ranges before they reach ipset — dropping it costs a longer set, not a
+# different policy — so a passthrough keeps the upstream script unmodified.
+RUN printf '#!/bin/sh\n# Alpine has no `aggregate`; see sandbox/Dockerfile. Dedupe only.\nsort -u\n' \
+        > /usr/local/bin/aggregate \
+    && chmod +x /usr/local/bin/aggregate
+
+COPY sandbox/mise.dev.toml /etc/mise/conf.d/dev.toml
+RUN mise install && mise reshim && rm -rf /root/.cache/mise \
+    && chmod -R a+rX "${MISE_DATA_DIR}"
+
+# --- additional coding agents ----------------------------------------------
+# The dev image is a multi-agent environment, not Claude-specific. Auth for
+# every agent is a run-later step; see the README's coding agents section.
+#
+# These stay on npm rather than in sandbox/mise.dev.toml because mise's npm
+# backend does not run postinstall scripts, and both packages resolve their
+# platform-native binary from one. npm also honours the `libc` field, so it
+# picks the musl build where the publisher ships it.
+#
+# @github/copilot is excluded on purpose: its prebuilt binary is dynamically
+# linked against glibc and dies on musl with `fcntl64: symbol not found`,
+# which gcompat cannot shim. It needs a glibc base image, not a flag.
+ARG OPENCODE_VERSION=1.18.11
+ARG OPENCHAMBER_VERSION=1.17.2
+RUN npm install -g --no-fund --no-audit \
+        "opencode-ai@${OPENCODE_VERSION}" \
+        "@openchamber/web@${OPENCHAMBER_VERSION}" \
+    && npm cache clean --force
 
 # Non-root user. The upstream devcontainer inherits the node user from its
 # base image; this lineage has none, so create one.
 ARG USERNAME=dev
-RUN useradd -m -u 1000 -s /bin/zsh "$USERNAME" && \
+RUN adduser -D -u 1000 -s /bin/zsh "$USERNAME" && \
     mkdir -p /commandhistory "/home/${USERNAME}/.claude" && \
     touch /commandhistory/.bash_history && \
     chown -R "$USERNAME:$USERNAME" /commandhistory "/home/${USERNAME}/.claude" /workspace
@@ -71,60 +110,26 @@ RUN chmod +x /usr/local/bin/init-firewall.sh && \
     echo "${USERNAME} ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/dev-firewall && \
     chmod 0440 /etc/sudoers.d/dev-firewall
 
-# --- additional coding agents ----------------------------------------------
-# The dev image is a multi-agent environment, not Claude-specific. Each agent
-# is installed by its upstream-documented method and pinned. Auth for every
-# agent is a run-later step; see the README's coding agents section.
-
-# Node.js 22 (nodesource): required by @github/copilot and @openchamber/web,
-# neither of which runs on Bun alone. Debian trixie ships an older nodejs.
-ARG NODE_MAJOR=22
-RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
-    rm -rf /var/lib/apt/lists/*
-
-# jcode (1jehuang/jcode, MIT): single Rust binary from a pinned GitHub
-# release, verified against the published SHA256SUMS. Trust note: jcode is a
-# young third-party project; the checksum pin means upgrades are deliberate.
-ARG JCODE_VERSION=0.64.2
-RUN cd /tmp && \
-    curl -fsSLO "https://github.com/1jehuang/jcode/releases/download/v${JCODE_VERSION}/jcode-linux-x86_64.tar.gz" && \
-    curl -fsSLO "https://github.com/1jehuang/jcode/releases/download/v${JCODE_VERSION}/SHA256SUMS" && \
-    grep "jcode-linux-x86_64.tar.gz" SHA256SUMS | sha256sum -c - && \
-    tar -xzf jcode-linux-x86_64.tar.gz -C /usr/local/bin jcode && \
-    rm -f jcode-linux-x86_64.tar.gz SHA256SUMS
-
-# opencode (sst/opencode) and GitHub Copilot CLI (@github/copilot), plus
-# OpenChamber (openchamber/openchamber), the web and desktop interface for
-# opencode. All three ship on npm; exact-version pins.
-ARG OPENCODE_VERSION=1.18.11
-ARG COPILOT_CLI_VERSION=1.0.77
-ARG OPENCHAMBER_VERSION=1.17.2
-RUN npm install -g --no-fund --no-audit \
-        "opencode-ai@${OPENCODE_VERSION}" \
-        "@github/copilot@${COPILOT_CLI_VERSION}" \
-        "@openchamber/web@${OPENCHAMBER_VERSION}"
-
 USER $USERNAME
 ENV SHELL=/bin/zsh
 ENV EDITOR=nano
 ENV VISUAL=nano
+ENV CLAUDE_CONFIG_DIR=/home/dev/.claude
 
 ARG ZSH_IN_DOCKER_VERSION=1.2.0
 RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh)" -- \
     -p git \
-    -p fzf \
-    -a "source /usr/share/doc/fzf/examples/key-bindings.zsh" \
-    -a "source /usr/share/doc/fzf/examples/completion.zsh" \
+    -a 'eval "$(fzf --zsh)"' \
     -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
     -x
 
-# Claude Code through the native installer; this lineage carries Bun, not
-# Node, so the upstream npm install path does not apply.
+# Claude Code through the native installer. Its npm package resolves the real
+# binary from a postinstall script that mise's npm backend never runs, and the
+# native installer is the upstream-documented path for a Node-less lineage
+# anyway — it ships a musl build and needs neither node nor bun.
 ARG CLAUDE_CODE_VERSION=latest
 RUN curl -fsSL https://claude.ai/install.sh | bash -s -- "$CLAUDE_CODE_VERSION"
 ENV PATH="/home/dev/.local/bin:$PATH"
-ENV CLAUDE_CONFIG_DIR=/home/dev/.claude
 
 ENTRYPOINT []
 CMD ["sleep", "infinity"]

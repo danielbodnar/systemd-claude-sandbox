@@ -111,18 +111,3 @@ docs-build:
 tapes:
     mkdir -p .tapes/out
     for tape in .tapes/*.tape; do vhs "$tape"; done
-
-# --- repo -------------------------------------------------------------------
-
-# Create the private GitHub repo if missing, push, and enable GitHub Pages
-# with the Actions source (idempotent, needs gh auth). If the Pages API call
-# fails, enable it manually: Settings -> Pages -> Source: GitHub Actions.
-publish:
-    gh repo view danielbodnar/systemd-claude-sandbox >/dev/null 2>&1 || \
-        gh repo create danielbodnar/systemd-claude-sandbox --private
-    git remote get-url origin >/dev/null 2>&1 || \
-        git remote add origin https://github.com/danielbodnar/systemd-claude-sandbox.git
-    git push -u origin main
-    gh api repos/danielbodnar/systemd-claude-sandbox/pages -X POST -f build_type=workflow 2>/dev/null || \
-        gh api repos/danielbodnar/systemd-claude-sandbox/pages -X PUT -f build_type=workflow 2>/dev/null || \
-        echo "Pages API call failed; enable manually: Settings -> Pages -> Source: GitHub Actions"

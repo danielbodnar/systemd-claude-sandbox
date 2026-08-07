@@ -7,7 +7,7 @@
   // Runtime flags (privileged for docker-in-docker, NET_ADMIN and NET_RAW
   // for the firewall script) live on the compose service, since compose
   // owns container creation in this setup.
-  "name": "systemd-claude-sandbox dev",
+  "name": "systemd-claude-sandbox-dev",
   "dockerComposeFile": ["../compose.yaml"],
   "service": "dev",
   "runServices": ["dev"],
@@ -15,26 +15,17 @@
   "remoteUser": "dev",
 
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:3": {
-      "moby": true,
-      "dockerDashComposeVersion": "v2"
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {
+      "moby": true
     }
   },
 
   "customizations": {
     "vscode": {
       "extensions": [
-        "anthropic.claude-code",
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "eamodio.gitlens"
+        "anthropic.claude-code"
       ],
       "settings": {
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "editor.codeActionsOnSave": {
-          "source.fixAll.eslint": "explicit"
-        },
         "terminal.integrated.defaultProfile.linux": "zsh",
         "terminal.integrated.profiles.linux": {
           "bash": { "path": "bash", "icon": "terminal-bash" },

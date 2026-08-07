@@ -1,0 +1,25 @@
+# Toolchain manifest for the `dev` stage of sandbox/Dockerfile.
+#
+# Layered on top of sandbox/mise.toml by dropping it into /etc/mise/conf.d/,
+# which mise merges with the global config. Tools pinned here are additive; the
+# sandbox-stage pins stay in one place.
+#
+# Two things mise deliberately does not manage here. Node comes from apk: mise
+# has no musl prebuilt and falls back to compiling from source. And the
+# npm-distributed coding agents are installed by npm itself in the Dockerfile,
+# because mise's npm backend does not run postinstall scripts and those
+# packages resolve their platform-native binary from one — see the comment on
+# that stage.
+
+[tools]
+"github:dandavison/delta" = { version = "0.18.2", exe = "delta" }
+fzf = "0.74.2"
+gh = "2.97.0"
+
+# jcode (1jehuang/jcode, MIT) — a young third-party project, left off by
+# default. The github backend verifies the release's published checksums, so
+# enabling it is a deliberate, pinned edit:
+# "github:1jehuang/jcode" = { version = "0.64.2", exe = "jcode" }
+
+[settings]
+yes = true

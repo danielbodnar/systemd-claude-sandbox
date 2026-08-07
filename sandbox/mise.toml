@@ -1,0 +1,27 @@
+# Toolchain manifest for the `sandbox` stage of sandbox/Dockerfile.
+#
+# Installed into the image as mise's global config (/etc/mise/config.toml), so
+# every user and every shell in the container sees the same pinned versions and
+# the shims directory on PATH resolves them. This file — not a wall of
+# Dockerfile ARGs — is where sandbox-stage version bumps happen.
+#
+# What is NOT here: bash, git, python3, ca-certificates and the other OS-level
+# packages. Those come from apk. The dividing line is musl: mise ships prebuilt
+# binaries for these tools, and anything it would have to compile from source on
+# Alpine (python, node) is left to the distro. See sandbox/mise.dev.toml.
+
+[tools]
+# The ant CLI is the worker runtime. anthropic-cli publishes GitHub release
+# tarballs rather than a registry package, so mise's github backend fetches it
+# directly; the archive contains a single statically linked `ant`.
+"github:anthropics/anthropic-cli" = { version = "1.21.0", exe = "ant" }
+
+# Bun for JS and TS execution inside sessions and for bunx-launched MCP servers.
+bun = "1.3.14"
+
+ripgrep = "14.1.1"
+jq = "1.7.1"
+
+[settings]
+# Containers have no interactive terminal to confirm at.
+yes = true
