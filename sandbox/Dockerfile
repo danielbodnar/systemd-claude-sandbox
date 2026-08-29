@@ -42,12 +42,21 @@ ENV MISE_DATA_DIR=/usr/local/share/mise \
 
 RUN apk add --no-cache mise bash ca-certificates curl git wget libstdc++
 
-COPY . .
-RUN chmod +x bootstrap-mise.sh && ./bootstrap-mise.sh
+# Copy only what this stage needs. `COPY . .` landed the whole build context in
+# `/` — including node_modules and .git — and, with no WORKDIR set yet, put the
+# script at /sandbox/bootstrap-mise.sh while the next line looked for
+# /bootstrap-mise.sh. The build failed there with
+# "chmod: bootstrap-mise.sh: No such file or directory".
+COPY sandbox/bootstrap-mise.sh /usr/local/bin/bootstrap-mise.sh
+RUN chmod +x /usr/local/bin/bootstrap-mise.sh && /usr/local/bin/bootstrap-mise.sh
 
 RUN mise --version
 #RUN mise use -g ripgrep@latest jq@latest bun@latest opencode@latest npm@latest pnpm@latest docker-slim@latest docker-cli@latest delta@latest npm@latest node@latest ripgrep@latest gh@latest fzf@latest uv@latest
-COPY mise.toml /etc/mise/config.toml
+# sandbox/mise.toml, not the repo-root mise.toml. The build context is the repo
+# root, so the bare name resolved to the wrong file and silently shipped the
+# host toolchain manifest instead of the image's. CLAUDE.md: "Version pins live
+# in sandbox/mise.toml and sandbox/mise.dev.toml".
+COPY sandbox/mise.toml /etc/mise/config.toml
 RUN mise install && mise reshim && rm -rf /root/.cache/mise
 
 WORKDIR /workspace

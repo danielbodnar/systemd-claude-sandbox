@@ -1,0 +1,10 @@
+# The build context is the repo root (compose.yaml: context: .), so without
+# these every build ships ~470MB of node_modules and the full git history.
+node_modules
+**/node_modules
+.git
+.attic
+.codesearch
+site/dist
+.tapes/out
+*.gif
