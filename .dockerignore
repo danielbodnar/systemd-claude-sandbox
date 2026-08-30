@@ -1,0 +1,22 @@
+# The build context is the repo root (compose.yaml sets `context: .` for every
+# service), so the whole tree is sent to the daemon on every build even when a
+# Dockerfile copies only two files from it. node_modules alone is ~470MB.
+node_modules
+**/node_modules
+.git
+
+# Quarantine and agent scratch, never build inputs.
+.attic
+.codesearch
+
+# Build artefacts and recordings.
+site/dist
+.tapes/out
+
+# Runtime credentials. Nothing copies .env today, but the build context is the
+# whole repo and it holds ANTHROPIC_ENVIRONMENT_KEY — a later `COPY . .` would
+# bake it into a layer. feat/alpine had exactly that COPY, so this is a
+# demonstrated failure mode, not a hypothetical one.
+.env
+.env.*
+!.env.example

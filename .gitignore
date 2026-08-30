@@ -16,3 +16,7 @@ outputs/
 # docs site build artifacts
 site/dist/
 site/.astro/
+
+# Editor/agent scratch
+*.bak
+.codesearch/
