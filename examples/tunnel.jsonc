@@ -6,10 +6,10 @@
   "routes": [
     // Example: uncomment the mcp-filesystem service in compose.yaml first.
     // { "name": "filesystem", "upstream": "http://mcp-filesystem:9101/mcp" }
-    { "name": "example", "upstream": "http://mcp-example:9100/mcp" }
+    { "name": "example", "upstream": "http://mcp-example:9100/mcp" },
   ],
   // Publish transport. "none" keeps the listener local. "cloudflared" is
   // the proposed default but requires both this setting and the
   // --enable-cloudflared flag until the decision record is accepted.
-  "transport": { "kind": "none" }
+  "transport": { "kind": "none" },
 }

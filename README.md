@@ -40,17 +40,17 @@ systemd's role is deliberately small. `host/systemd/claude-sandbox.service` brin
 
 ## Repository layout
 
-| Path | Purpose |
-|------|---------|
-| `compose.yaml` | The stack: worker, mcp-tunnel, profile-gated cloudflared |
-| `sandbox/` | Worker image (Dockerfile) and spawn-per-session script |
-| `mcp-tunnel/` | Bun and strict TypeScript MCP reverse proxy with pluggable publish transports |
-| `host/systemd/` | The one unit that supervises the stack on the deploy host |
-| `scripts/deploy.sh` | Host-side installer, invoked by `just deploy` |
-| `examples/tunnel.jsonc` | Tunnel route configuration |
-| `backends/cloudflare/` | Alternative execution backend on Cloudflare Sandboxes (same contract, different runtime) |
-| `docs/` | Architecture notes and decision records |
-| `justfile` | The repeatable workflow: build, run, test, deploy, publish |
+| Path                    | Purpose                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| `compose.yaml`          | The stack: worker, mcp-tunnel, profile-gated cloudflared                                 |
+| `sandbox/`              | Worker image (Dockerfile) and spawn-per-session script                                   |
+| `mcp-tunnel/`           | Bun and strict TypeScript MCP reverse proxy with pluggable publish transports            |
+| `host/systemd/`         | The one unit that supervises the stack on the deploy host                                |
+| `scripts/deploy.sh`     | Host-side installer, invoked by `just deploy`                                            |
+| `examples/tunnel.jsonc` | Tunnel route configuration                                                               |
+| `backends/cloudflare/`  | Alternative execution backend on Cloudflare Sandboxes (same contract, different runtime) |
+| `docs/`                 | Architecture notes and decision records                                                  |
+| `justfile`              | The repeatable workflow: build, run, test, deploy, publish                               |
 
 ## Quick start
 
@@ -115,13 +115,13 @@ VS Code and other devcontainer-aware editors pick up `.devcontainer/devcontainer
 
 The dev stage is a multi-agent execution environment. Five agents are installed, each by its upstream-documented method, pinned in `sandbox/Dockerfile` build args, and all requiring account sign-in as a run-later step.
 
-| Agent | Entry point | Install source | Auth |
-|-------|-------------|----------------|------|
-| Claude Code | `claude` | Native installer (claude.ai/install.sh) | `claude` then `/login`, or `ANTHROPIC_API_KEY` |
-| jcode | `jcode` | Pinned GitHub release binary (v0.64.2), checksum-verified | Provider keys per jcode.sh/docs |
-| opencode | `opencode` | npm `opencode-ai@1.18.11` (sst/opencode) | `opencode auth login` (75+ providers) |
-| OpenChamber | `openchamber` | npm `@openchamber/web@1.17.2` | Wraps the local opencode install; web UI guarded by `--ui-password` |
-| Copilot CLI | `copilot` | npm `@github/copilot@1.0.77` | `/login` in the CLI, or `GH_TOKEN` |
+| Agent       | Entry point   | Install source                                            | Auth                                                                |
+| ----------- | ------------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
+| Claude Code | `claude`      | Native installer (claude.ai/install.sh)                   | `claude` then `/login`, or `ANTHROPIC_API_KEY`                      |
+| jcode       | `jcode`       | Pinned GitHub release binary (v0.64.2), checksum-verified | Provider keys per jcode.sh/docs                                     |
+| opencode    | `opencode`    | npm `opencode-ai@1.18.11` (sst/opencode)                  | `opencode auth login` (75+ providers)                               |
+| OpenChamber | `openchamber` | npm `@openchamber/web@1.17.2`                             | Wraps the local opencode install; web UI guarded by `--ui-password` |
+| Copilot CLI | `copilot`     | npm `@github/copilot@1.0.77`                              | `/login` in the CLI, or `GH_TOKEN`                                  |
 
 Two clarifications from resolving the upstreams. OpenChamber is not a standalone agent: it is the community desktop and web interface for opencode, so it is installed as opencode's companion and needs Node 22, which the dev stage provides via nodesource for it and the Copilot CLI. And the Copilot CLI here is the standalone `@github/copilot` npm package, not the older `gh` extension.
 
@@ -141,18 +141,22 @@ The installer stages the stack in `/opt/claude-sandbox`, seeds `/opt/claude-sand
 
 ## Alternative backend: Cloudflare Sandboxes
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Fdanielbodnar%2Fsystemd-claude-sandbox%2Ftree%2Fmain%2Fbackends%2Fcloudflare)
+
+The button deploys your own instance of the backend to your own Cloudflare account: it clones the repository to your GitHub or GitLab account, prompts for the two Anthropic secrets plus a `SANDBOX_API_TOKEN` that gates every API route except the `/healthz` health check, and deploys the Worker through Workers Builds. See [`backends/cloudflare/README.md`](backends/cloudflare/README.md) for what it provisions and the manual alternative.
+
 `backends/cloudflare/` implements the same execution contract on Cloudflare's Sandbox SDK (GA since April 2026): sessions become `Sandbox` Durable Object instances, the container image re-applies the same provisioning (ant CLI, Bun) on Cloudflare's base image, the same `ant beta:worker poll` can run inside a sandbox, and in-sandbox MCP servers are exposed through the SDK's native cloudflared tunnels instead of mcp-tunnel. The Worker typechecks today; everything requiring an authenticated wrangler (secrets, dev, deploy) is documented in `backends/cloudflare/README.md` as run-later steps, in the same spirit as the SSH deploy.
 
 ## Documentation, tours, and tapes
 
 Three layers of documentation serve three ways of learning. The [Starlight site](site/) carries the tutorial, how-to guides, reference tables, and explanations, and builds with `just docs-build` (link validation included). The [CodeTour](https://marketplace.visualstudio.com/items?itemName=vsls-contrib.codetour) in [`.tours/architecture.tour`](.tours/architecture.tour) walks a newcomer through the code itself, file by file, inside VS Code. The [VHS](https://github.com/charmbracelet/vhs) tapes in [`.tapes/`](.tapes/) script the key flows; render them to GIFs with `just tapes`, after which the images referenced here and in the site light up:
 
-| Tape | Shows |
-|------|-------|
-| `install.tape` | The launcher's probe and decision trail |
-| `stack-up.tape` | `just build`, `just up`, healthy services |
+| Tape                | Shows                                              |
+| ------------------- | -------------------------------------------------- |
+| `install.tape`      | The launcher's probe and decision trail            |
+| `stack-up.tape`     | `just build`, `just up`, healthy services          |
 | `devcontainer.tape` | Devcontainer launch and the five agents responding |
-| `mcp-tunnel.tape` | The tunnel starting and answering `/healthz` |
+| `mcp-tunnel.tape`   | The tunnel starting and answering `/healthz`       |
 
 ## Plugin marketplace
 

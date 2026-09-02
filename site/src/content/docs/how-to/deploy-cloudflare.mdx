@@ -1,0 +1,74 @@
+---
+title: Deploy to Cloudflare Sandboxes
+description: Deploy the sandbox backend to Cloudflare Sandboxes — one-click or with wrangler from the backends/cloudflare directory.
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components";
+
+The `backends/cloudflare/` directory implements the same execution contract as the local compose stack, running on [Cloudflare Sandboxes](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/sandboxes/) (GA since April 2026). Sessions become Durable Object instances; the same `ant beta:worker poll` runs inside each one.
+
+## One-click deploy
+
+Cloudflare Sandboxes require a Workers Paid plan with Containers enabled. Click the button to clone the repository into your connected GitHub or GitLab account, provide the required secrets, and deploy the backend.
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Fdanielbodnar%2Fsystemd-claude-sandbox%2Ftree%2Fmain%2Fbackends%2Fcloudflare)
+
+<Aside type="caution">
+  The wrangler configuration lives in `backends/cloudflare/`, not the repository
+  `backends/cloudflare`. When prompted, provide all three required secrets:
+  `ANTHROPIC_ENVIRONMENT_KEY`, `ANTHROPIC_ENVIRONMENT_ID`, and
+  `SANDBOX_API_TOKEN`, as described in step 2 below.
+</Aside>
+
+## Manual deploy with wrangler
+
+<Steps>
+
+1. Authenticate and install dependencies.
+
+   ```bash
+   cd backends/cloudflare
+   bun install
+   bunx wrangler login
+   ```
+
+2. Add the required Worker secrets. These must be secrets, not plaintext vars —
+   agent tool calls can read the worker environment.
+
+   ```bash
+   bunx wrangler secret put ANTHROPIC_ENVIRONMENT_KEY
+   bunx wrangler secret put ANTHROPIC_ENVIRONMENT_ID
+   bunx wrangler secret put SANDBOX_API_TOKEN
+   ```
+
+3. Deploy.
+
+   ```bash
+   bunx wrangler deploy
+   ```
+
+   The `wrangler.jsonc` `instance_type` defaults to `lite`. Raise it to a larger
+   instance type if sessions require more memory or CPU.
+
+</Steps>
+
+## Start a session
+
+<Aside type="note">
+  Every route except `/healthz` requires an `Authorization: ****** header. The Worker returns 503 when the secret is not configured and 401 when the header is missing or wrong.
+</Aside>
+
+Once deployed, start the Anthropic worker inside a sandbox by posting to the
+session endpoint:
+
+```bash
+curl -X POST "https://claude-sandbox-cf.<your-subdomain>.workers.dev/sessions/<random-session-id>/ant" \
+  -H "Authorization: ******"
+```
+
+MCP servers running inside the sandbox are reachable through the SDK's native
+cloudflared quick tunnel; see `sandbox.tunnels.get(port)` in the Worker source.
+
+## Relationship to the local compose backend
+
+Both backends implement the same contract. See the [architecture explanation](../../explanation/architecture/) for a comparison.

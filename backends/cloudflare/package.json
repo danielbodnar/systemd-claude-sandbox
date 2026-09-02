@@ -1,7 +1,7 @@
 {
   "name": "claude-sandbox-cf",
-  "type": "module",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
@@ -12,8 +12,7 @@
     "@cloudflare/sandbox": "^0.12.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4",
-    "typescript": "^5",
+    "typescript": "^7",
     "wrangler": "^4"
   }
 }
